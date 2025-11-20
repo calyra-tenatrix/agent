@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -18,7 +19,14 @@ var version = "dev"
 func main() {
 	mode := flag.String("mode", "run", "Mode to run: 'run' or 'update'")
 	configPath := flag.String("config", "/etc/tenatrix/config.json", "Path to config file")
+	showVersion := flag.Bool("version", false, "Show version information")
 	flag.Parse()
+
+	// Handle version flag
+	if *showVersion {
+		fmt.Printf("Tenatrix Agent %s\n", version)
+		os.Exit(0)
+	}
 
 	// Load configuration
 	cfg, err := config.Load(*configPath)
