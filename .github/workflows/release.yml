@@ -1,9 +1,8 @@
 name: Release Agent
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [created, published]
 
 permissions:
   contents: write
@@ -21,14 +20,10 @@ jobs:
         with:
           go-version: '1.23'
 
-      - name: Get version from tag
-        id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
       - name: Build static binary
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-            -ldflags "-X main.version=${{ steps.get_version.outputs.VERSION }} -s -w" \
+            -ldflags "-X main.version=${{ github.event.release.tag_name }} -s -w" \
             -o tenatrix-agent-linux-amd64 \
             cmd/agent/main.go
 
@@ -37,58 +32,11 @@ jobs:
           sha256sum tenatrix-agent-linux-amd64 > checksums.txt
           cat checksums.txt
 
-      - name: Create GitHub Release
+      - name: Upload Release Assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
             tenatrix-agent-linux-amd64
             checksums.txt
-          body: |
-            ## Tenatrix Agent ${{ steps.get_version.outputs.VERSION }}
-
-            ### Automated Installation
-            ```bash
-            curl -fsSL https://raw.githubusercontent.com/calyra-tenatrix/agent/main/scripts/install.sh | \
-              sudo bash -s -- \
-              --token '<your-tenatrix-token>' \
-              --do-token '<your-digitalocean-token>' \
-              --backend 'grpc.tenatrix.com:9090'
-            ```
-
-            ### Manual Installation
-            ```bash
-            # Download binary
-            curl -fsSL https://github.com/calyra-tenatrix/agent/releases/download/${{ steps.get_version.outputs.VERSION }}/tenatrix-agent-linux-amd64 \
-              -o /usr/local/bin/tenatrix-agent
-
-            # Make executable
-            chmod +x /usr/local/bin/tenatrix-agent
-
-            # Create config
-            sudo mkdir -p /etc/tenatrix
-            sudo cat > /etc/tenatrix/config.json <<EOF
-            {
-              "target_token": "your-token",
-              "do_token": "your-do-token",
-              "backend_url": "grpc.tenatrix.com:9090",
-              "update_check_interval": "5m",
-              "heartbeat_interval": "30s"
-            }
-            EOF
-            sudo chmod 600 /etc/tenatrix/config.json
-            ```
-
-            ### Checksum Verification
-            ```bash
-            curl -fsSL https://github.com/calyra-tenatrix/agent/releases/download/${{ steps.get_version.outputs.VERSION }}/checksums.txt | \
-              sha256sum -c
-            ```
-
-            ---
-
-            **What's Changed:**
-            - See commits since last release for details
-
-            **Full Changelog**: https://github.com/calyra-tenatrix/agent/compare/v0.0.0...${{ steps.get_version.outputs.VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
