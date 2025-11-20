@@ -2,7 +2,7 @@ name: Release Agent
 
 on:
   release:
-    types: [created, published]
+    types: [published]
 
 permissions:
   contents: write
