@@ -1,0 +1,808 @@
+syntax = "proto3";
+
+package agent.v1;
+
+option go_package = "agent/v1;agentv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// ============================================================================
+// AgentService - Central service for agent-backend communication
+// ============================================================================
+
+service AgentService {
+  // Bi-directional streaming channel for all agent-backend communication
+  // Tasks flow: Backend -> Agent
+  // Results/Events flow: Agent -> Backend
+  // Health checks: Backend requests via stream, Agent responds via stream
+  rpc AgentChannel(stream AgentMessage) returns (stream BackendMessage);
+
+  // Periodic heartbeat for basic liveness monitoring (separate from main channel)
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+}
+
+// ============================================================================
+// Agent -> Backend Messages
+// ============================================================================
+
+message AgentMessage {
+  string agent_version = 1;         // Agent version (e.g., "1.0.0")
+  Platform platform = 2;            // Agent platform (k8s/linux/windows)
+  google.protobuf.Timestamp sent_at = 3;  // Message timestamp
+
+  oneof payload {
+    TaskAck task_ack = 10;          // Task received acknowledgment
+    TaskResult task_result = 11;    // Task execution result
+    EventBatch event_batch = 12;    // Platform events batch
+    AgentStatus status = 13;        // Agent status update
+  }
+}
+
+// ============================================================================
+// Backend -> Agent Messages
+// ============================================================================
+
+message BackendMessage {
+  string message_id = 1;            // Unique message identifier
+  google.protobuf.Timestamp sent_at = 2;
+
+  oneof payload {
+    Task task = 10;                 // Deployment task
+    ConfigUpdate config_update = 11; // Configuration update
+    TaskCancellation cancellation = 12; // Cancel running task
+    HealthCheckRequest health_check_request = 13; // On-demand health check
+    UpdateNotification update_notification = 14; // Agent update available
+    WelcomeMessage welcome = 15;    // Connection welcome/acknowledgment
+  }
+}
+
+// ============================================================================
+// Platform Definition
+// ============================================================================
+
+enum Platform {
+  PLATFORM_UNSPECIFIED = 0;
+  PLATFORM_KUBERNETES = 1;
+  PLATFORM_LINUX = 2;
+  PLATFORM_WINDOWS = 3;
+  // Future: PLATFORM_DOCKER_SWARM = 4;
+  // Future: PLATFORM_NOMAD = 5;
+}
+
+// ============================================================================
+// Cloud Provider Detection
+// ============================================================================
+
+// CloudProvider identifies the cloud platform hosting the cluster
+enum CloudProvider {
+  CLOUD_PROVIDER_UNSPECIFIED = 0;
+  CLOUD_PROVIDER_GENERIC = 1;      // Generic Kubernetes (on-prem, unknown)
+  CLOUD_PROVIDER_GKE = 2;          // Google Kubernetes Engine
+  CLOUD_PROVIDER_EKS = 3;          // Amazon Elastic Kubernetes Service
+  CLOUD_PROVIDER_AKS = 4;          // Azure Kubernetes Service
+  CLOUD_PROVIDER_DIGITALOCEAN = 5; // DigitalOcean Kubernetes
+  CLOUD_PROVIDER_LINODE = 6;       // Linode Kubernetes Engine (future)
+  CLOUD_PROVIDER_CIVO = 7;         // Civo Kubernetes (future)
+  CLOUD_PROVIDER_MINIKUBE = 8;     // Minikube (local development)
+}
+
+// CloudDetectionMethod indicates how the cloud provider was detected
+enum CloudDetectionMethod {
+  CLOUD_DETECTION_METHOD_UNSPECIFIED = 0;
+  CLOUD_DETECTION_METHOD_METADATA_SERVICE = 1;  // Detected via cloud metadata service (no RBAC required)
+  CLOUD_DETECTION_METHOD_NODE_LABELS = 2;       // Detected via Kubernetes node labels (requires nodes:get RBAC)
+  CLOUD_DETECTION_METHOD_MANUAL = 3;            // Manually configured
+}
+
+// CloudInfo contains detected cloud provider information
+message CloudInfo {
+  CloudProvider provider = 1;                  // Detected cloud provider
+  string region = 2;                           // e.g., "us-central1", "us-east-1"
+  string zone = 3;                             // e.g., "us-central1-a"
+  string cluster_name = 4;                     // Detected cluster name (if available)
+  CloudDetectionMethod detection_method = 5;   // How was the provider detected
+  map<string, string> metadata = 6;            // Additional provider-specific metadata
+}
+
+// ============================================================================
+// Task Definition (Universal)
+// ============================================================================
+
+message Task {
+  string id = 1;                    // Unique task ID
+  TaskType type = 2;                // Task type
+  Platform platform = 3;            // Target platform
+  Priority priority = 4;            // Task priority
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp expires_at = 6;  // Task expiration
+  int32 max_retries = 7;            // Maximum retry attempts
+  int32 timeout_seconds = 8;        // Task timeout
+  map<string, string> metadata = 9; // Additional metadata
+
+  oneof payload {
+    KubernetesTask kubernetes = 20;
+    LinuxTask linux = 21;
+    WindowsTask windows = 22;
+  }
+}
+
+enum TaskType {
+  TASK_TYPE_UNSPECIFIED = 0;
+  TASK_TYPE_DEPLOY = 1;
+  TASK_TYPE_SCALE = 2;
+  TASK_TYPE_ROLLBACK = 3;
+  TASK_TYPE_DELETE = 4;
+  TASK_TYPE_RESTART = 5;
+  TASK_TYPE_HEALTH_CHECK = 6;
+  TASK_TYPE_UPDATE_CONFIG = 7;
+}
+
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_LOW = 1;
+  PRIORITY_NORMAL = 2;
+  PRIORITY_HIGH = 3;
+  PRIORITY_CRITICAL = 4;
+}
+
+// ============================================================================
+// Kubernetes Tasks
+// ============================================================================
+
+message KubernetesTask {
+  oneof operation {
+    K8sDeployTask deploy = 1;
+    K8sScaleTask scale = 2;
+    K8sRollbackTask rollback = 3;
+    K8sDeleteTask delete = 4;
+    K8sRestartTask restart = 5;
+  }
+}
+
+message K8sDeployTask {
+  string deployment_id = 1;         // Backend deployment ID
+  string namespace = 2;             // K8s namespace
+  string component_name = 3;        // Component name (e.g., crm-api)
+
+  // DECLARATIVE: Backend-rendered YAML manifests
+  // Agent simply applies these manifests (kubectl apply)
+  repeated KubernetesManifest manifests = 20;
+}
+
+message KubernetesManifest {
+  string api_version = 1;           // e.g., "apps/v1", "v1", "networking.k8s.io/v1"
+  string kind = 2;                  // e.g., "Deployment", "Service", "Ingress"
+  string name = 3;                  // Resource name
+  string yaml_content = 4;          // Rendered YAML template
+  map<string, string> labels = 5;   // K8s labels (for tracking)
+}
+
+enum WorkloadType {
+  WORKLOAD_TYPE_UNSPECIFIED = 0;
+  WORKLOAD_TYPE_DEPLOYMENT = 1;
+  WORKLOAD_TYPE_STATEFULSET = 2;
+  WORKLOAD_TYPE_DAEMONSET = 3;
+}
+
+message K8sScaleTask {
+  string namespace = 1;
+  string name = 2;
+  int32 replicas = 3;
+}
+
+message K8sRollbackTask {
+  string namespace = 1;
+  string name = 2;
+  int32 revision = 3;               // 0 = previous revision
+}
+
+message K8sDeleteTask {
+  string namespace = 1;
+  string name = 2;
+  bool cascade = 3;                 // Delete dependent resources
+  int32 grace_period_seconds = 4;   // Graceful shutdown period
+}
+
+message K8sRestartTask {
+  string namespace = 1;
+  string name = 2;
+}
+
+// ============================================================================
+// Linux Tasks
+// ============================================================================
+
+message LinuxTask {
+  oneof operation {
+    LinuxDeployTask deploy = 1;
+    LinuxScaleTask scale = 2;
+    LinuxRestartTask restart = 3;
+    LinuxDeleteTask delete = 4;
+  }
+}
+
+message LinuxDeployTask {
+  string service_name = 1;
+  LinuxDeploymentType deployment_type = 2;
+
+  // Docker deployment
+  string image = 3;
+  map<string, string> env = 4;
+  repeated PortMapping ports = 5;
+  repeated VolumeMount volumes = 6;
+  Resources resources = 7;
+  string network = 8;               // Docker network
+  repeated string depends_on = 9;   // Service dependencies
+
+  // Systemd/Binary deployment
+  string binary_url = 10;           // Download URL
+  string binary_checksum = 11;      // SHA256 checksum
+  string install_path = 12;         // Installation directory
+  SystemdConfig systemd = 13;       // systemd configuration
+
+  // Common
+  string user = 14;                 // Run as user
+  string working_dir = 15;          // Working directory
+  HealthCheckConfig health_check = 16;
+}
+
+enum LinuxDeploymentType {
+  LINUX_DEPLOYMENT_TYPE_UNSPECIFIED = 0;
+  LINUX_DEPLOYMENT_TYPE_DOCKER = 1;
+  LINUX_DEPLOYMENT_TYPE_PODMAN = 2;
+  LINUX_DEPLOYMENT_TYPE_SYSTEMD = 3;
+  LINUX_DEPLOYMENT_TYPE_BINARY = 4;
+}
+
+message LinuxScaleTask {
+  string service_name = 1;
+  int32 replicas = 2;               // For docker-compose scale
+}
+
+message LinuxRestartTask {
+  string service_name = 1;
+}
+
+message LinuxDeleteTask {
+  string service_name = 1;
+  bool remove_volumes = 2;
+  bool remove_images = 3;
+}
+
+message SystemdConfig {
+  string description = 1;
+  string exec_start = 2;
+  string exec_stop = 3;
+  string working_directory = 4;
+  string user = 5;
+  string restart = 6;               // always, on-failure, no
+  int32 restart_sec = 7;
+  map<string, string> environment = 8;
+  repeated string after = 9;        // Service dependencies
+  repeated string requires = 10;
+}
+
+// ============================================================================
+// Windows Tasks
+// ============================================================================
+
+message WindowsTask {
+  oneof operation {
+    WindowsDeployTask deploy = 1;
+    WindowsRestartTask restart = 2;
+    WindowsDeleteTask delete = 3;
+  }
+}
+
+message WindowsDeployTask {
+  string deployment_id = 1;         // Backend deployment ID
+  WindowsDeploymentType deployment_type = 2;
+
+  // HYBRID: Desired state + artifact
+  WindowsDesiredState desired_state = 3;
+
+  // Artifact to deploy
+  ArtifactSource artifact = 4;
+}
+
+message WindowsDesiredState {
+  // IIS Site configuration
+  IISSiteConfig site = 1;
+
+  // Application pool configuration
+  AppPoolConfig app_pool = 2;
+
+  // Backend-rendered config files
+  repeated ConfigFile configs = 3;
+
+  // Artifact version (for state checking)
+  string artifact_version = 4;
+
+  // Advanced IIS settings
+  IISAdvancedSettings iis_settings = 5;
+}
+
+message IISSiteConfig {
+  string name = 1;
+  string physical_path = 2;
+  string state = 3;                 // started, stopped
+  repeated IISBinding bindings = 4;
+  string app_pool_name = 5;
+}
+
+message IISAdvancedSettings {
+  AuthenticationSettings authentication = 1;
+  SSLSettings ssl = 2;
+  PerformanceSettings performance = 3;
+}
+
+message AuthenticationSettings {
+  bool anonymous = 1;
+  bool windows = 2;
+  bool basic = 3;
+}
+
+message SSLSettings {
+  bool enabled = 1;
+  int32 port = 2;
+  string certificate_thumbprint = 3;
+  bool require_ssl = 4;
+}
+
+message PerformanceSettings {
+  int32 request_timeout = 1;
+  int64 max_bandwidth = 2;
+  int32 connection_timeout = 3;
+}
+
+message ConfigFile {
+  string name = 1;                  // e.g., "web.config"
+  string path = 2;                  // e.g., "web.config" or "config/appsettings.json"
+  string content = 3;               // Rendered content
+  ConfigFormat format = 4;          // For validation
+}
+
+enum ConfigFormat {
+  CONFIG_FORMAT_UNSPECIFIED = 0;
+  CONFIG_FORMAT_XML = 1;
+  CONFIG_FORMAT_JSON = 2;
+  CONFIG_FORMAT_INI = 3;
+  CONFIG_FORMAT_YAML = 4;
+  CONFIG_FORMAT_TEXT = 5;
+}
+
+message ArtifactSource {
+  string url = 1;                   // Download URL
+  string checksum = 2;              // SHA256 checksum
+  string version = 3;               // e.g., "2.3.1"
+  ArtifactType type = 4;            // ZIP, TAR_GZ, etc.
+}
+
+enum ArtifactType {
+  ARTIFACT_TYPE_UNSPECIFIED = 0;
+  ARTIFACT_TYPE_ZIP = 1;
+  ARTIFACT_TYPE_TAR_GZ = 2;
+  ARTIFACT_TYPE_DOCKER_IMAGE = 3;
+  ARTIFACT_TYPE_MSI = 4;
+  ARTIFACT_TYPE_EXE = 5;
+}
+
+enum WindowsDeploymentType {
+  WINDOWS_DEPLOYMENT_TYPE_UNSPECIFIED = 0;
+  WINDOWS_DEPLOYMENT_TYPE_SERVICE = 1;
+  WINDOWS_DEPLOYMENT_TYPE_IIS = 2;
+  WINDOWS_DEPLOYMENT_TYPE_MSI = 3;
+}
+
+message WindowsServiceConfig {
+  string display_name = 1;
+  string description = 2;
+  ServiceStartType start_type = 3;
+  string account = 4;               // LocalSystem, NetworkService, custom
+  string password = 5;              // For custom accounts
+  repeated string dependencies = 6;  // Service dependencies
+  RecoveryAction recovery = 7;      // Failure recovery actions
+}
+
+enum ServiceStartType {
+  SERVICE_START_TYPE_UNSPECIFIED = 0;
+  SERVICE_START_TYPE_AUTO = 1;
+  SERVICE_START_TYPE_MANUAL = 2;
+  SERVICE_START_TYPE_DISABLED = 3;
+  SERVICE_START_TYPE_AUTO_DELAYED = 4;
+}
+
+message RecoveryAction {
+  string first_failure = 1;         // restart, reboot, run-command, none
+  string second_failure = 2;
+  string subsequent_failures = 3;
+  int32 reset_period_days = 4;
+}
+
+message IISConfig {
+  string site_name = 1;
+  string app_pool_name = 2;
+  string physical_path = 3;
+  repeated IISBinding bindings = 4;
+  AppPoolConfig app_pool = 5;
+}
+
+message IISBinding {
+  string protocol = 1;              // http, https
+  string ip_address = 2;
+  int32 port = 3;
+  string host_name = 4;
+  string certificate_hash = 5;      // For HTTPS
+}
+
+message AppPoolConfig {
+  string runtime_version = 1;       // v4.0, v2.0, NoManagedCode
+  string pipeline_mode = 2;         // Integrated, Classic
+  bool enable_32bit = 3;
+  int32 idle_timeout_minutes = 4;
+}
+
+message WindowsRegistryValue {
+  string value_type = 1;            // string, dword, qword, binary
+  string value = 2;
+}
+
+message WindowsRestartTask {
+  string service_name = 1;
+}
+
+message WindowsDeleteTask {
+  string service_name = 1;
+  bool remove_files = 2;
+}
+
+// ============================================================================
+// Common Types
+// ============================================================================
+
+message Resources {
+  string cpu_request = 1;           // e.g., "100m", "0.5"
+  string cpu_limit = 2;
+  string memory_request = 3;        // e.g., "128Mi", "1Gi"
+  string memory_limit = 4;
+  string storage_request = 5;
+  string storage_limit = 6;
+}
+
+message PortMapping {
+  int32 container_port = 1;
+  int32 host_port = 2;
+  string protocol = 3;              // tcp, udp, sctp
+  string name = 4;                  // Port name (optional)
+}
+
+message VolumeMount {
+  string name = 1;
+  string mount_path = 2;
+  string host_path = 3;             // For host path volumes
+  string pvc_name = 4;              // For PVC (K8s)
+  bool read_only = 5;
+  string sub_path = 6;
+}
+
+message HealthCheckConfig {
+  HealthCheckType type = 1;
+  string http_path = 2;             // For HTTP checks
+  int32 port = 3;
+  int32 initial_delay_seconds = 4;
+  int32 period_seconds = 5;
+  int32 timeout_seconds = 6;
+  int32 success_threshold = 7;
+  int32 failure_threshold = 8;
+  repeated string exec_command = 9;  // For exec checks
+}
+
+enum HealthCheckType {
+  HEALTH_CHECK_TYPE_UNSPECIFIED = 0;
+  HEALTH_CHECK_TYPE_HTTP = 1;
+  HEALTH_CHECK_TYPE_TCP = 2;
+  HEALTH_CHECK_TYPE_EXEC = 3;
+}
+
+message DeploymentStrategy {
+  StrategyType type = 1;
+  int32 max_surge = 2;              // RollingUpdate max surge
+  int32 max_unavailable = 3;        // RollingUpdate max unavailable
+}
+
+enum StrategyType {
+  STRATEGY_TYPE_UNSPECIFIED = 0;
+  STRATEGY_TYPE_ROLLING_UPDATE = 1;
+  STRATEGY_TYPE_RECREATE = 2;
+  STRATEGY_TYPE_BLUE_GREEN = 3;
+  STRATEGY_TYPE_CANARY = 4;
+}
+
+// ============================================================================
+// Task Lifecycle Messages
+// ============================================================================
+
+message TaskAck {
+  string task_id = 1;
+  google.protobuf.Timestamp received_at = 2;
+  bool accepted = 3;                // False if agent rejects task
+  string rejection_reason = 4;
+}
+
+message TaskResult {
+  string task_id = 1;
+  TaskStatus status = 2;
+  google.protobuf.Struct result = 3;  // Platform-specific result data
+  ErrorInfo error = 4;
+  google.protobuf.Timestamp started_at = 5;
+  google.protobuf.Timestamp completed_at = 6;
+  int32 retry_count = 7;
+  repeated string logs = 8;         // Execution logs (last 100 lines)
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_PENDING = 1;
+  TASK_STATUS_ACCEPTED = 2;
+  TASK_STATUS_PROCESSING = 3;
+  TASK_STATUS_COMPLETED = 4;
+  TASK_STATUS_FAILED = 5;
+  TASK_STATUS_CANCELLED = 6;
+  TASK_STATUS_TIMEOUT = 7;
+}
+
+message ErrorInfo {
+  string code = 1;                  // Error code (e.g., "K8S_API_ERROR")
+  string message = 2;               // Human-readable message
+  ErrorCategory category = 3;
+  bool retryable = 4;               // Is this error retryable?
+  map<string, string> details = 5;  // Additional error context
+}
+
+enum ErrorCategory {
+  ERROR_CATEGORY_UNSPECIFIED = 0;
+  ERROR_CATEGORY_PLATFORM = 1;      // Platform API error
+  ERROR_CATEGORY_NETWORK = 2;       // Network/connectivity error
+  ERROR_CATEGORY_CONFIGURATION = 3;  // Invalid configuration
+  ERROR_CATEGORY_RESOURCE = 4;      // Resource quota/limit error
+  ERROR_CATEGORY_AUTHENTICATION = 5; // Auth/permission error
+  ERROR_CATEGORY_TIMEOUT = 6;       // Operation timeout
+  ERROR_CATEGORY_INTERNAL = 7;      // Agent internal error
+}
+
+message TaskCancellation {
+  string task_id = 1;
+  string reason = 2;
+}
+
+// ============================================================================
+// Event Streaming
+// ============================================================================
+
+message EventBatch {
+  Platform platform = 1;
+
+  oneof events {
+    K8sEventBatch k8s_events = 10;
+    LinuxEventBatch linux_events = 11;
+    WindowsEventBatch windows_events = 12;
+  }
+}
+
+message K8sEventBatch {
+  repeated K8sEvent events = 1;
+}
+
+message K8sEvent {
+  string event_type = 1;            // Normal, Warning, Error
+  google.protobuf.Timestamp timestamp = 2;
+  string namespace = 3;
+  string resource_kind = 4;         // Deployment, Pod, Service
+  string resource_name = 5;
+  string reason = 6;                // ScalingReplicaSet, FailedScheduling
+  string message = 7;
+  int32 count = 8;
+  google.protobuf.Struct metadata = 9;
+}
+
+message LinuxEventBatch {
+  repeated LinuxEvent events = 1;
+}
+
+message LinuxEvent {
+  string event_type = 1;            // service_started, container_failed, etc.
+  google.protobuf.Timestamp timestamp = 2;
+  string service_name = 3;
+  string message = 4;
+  string severity = 5;              // info, warning, error
+  google.protobuf.Struct metadata = 6;
+}
+
+message WindowsEventBatch {
+  repeated WindowsEvent events = 1;
+}
+
+message WindowsEvent {
+  string event_type = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string service_name = 3;
+  int32 event_id = 4;               // Windows Event ID
+  string source = 5;                // Event source
+  string level = 6;                 // Information, Warning, Error, Critical
+  string message = 7;
+  google.protobuf.Struct metadata = 8;
+}
+
+// ============================================================================
+// Agent Status & Health
+// ============================================================================
+
+message AgentStatus {
+  Platform platform = 1;
+  HealthStatus health_status = 2;
+  int32 active_tasks = 3;
+  AgentMetrics metrics = 4;
+  map<string, ExecutorStatus> executors = 5;
+  string request_id = 6;            // Correlates with HealthCheckRequest (if responding to one)
+  PlatformCapabilities capabilities = 7; // Platform capabilities
+  CloudInfo cloud_info = 8;         // Cloud provider information (detected at startup)
+}
+
+message AgentMetrics {
+  int64 memory_usage_bytes = 1;
+  double cpu_usage_percent = 2;
+  int32 goroutine_count = 3;
+  int64 uptime_seconds = 4;
+  int64 tasks_completed = 5;
+  int64 tasks_failed = 6;
+  google.protobuf.Timestamp last_task_at = 7;
+}
+
+message ExecutorStatus {
+  string name = 1;                  // kubernetes, linux, windows
+  bool is_healthy = 2;
+  string version = 3;               // Platform version (e.g., K8s v1.28)
+  map<string, string> details = 4;
+}
+
+// ============================================================================
+// Platform Capabilities
+// ============================================================================
+
+message PlatformCapabilities {
+  map<string, CapabilityInfo> features = 1;
+}
+
+message CapabilityInfo {
+  bool detected = 1;
+  string version = 2;
+  map<string, string> details = 3;
+}
+
+// ============================================================================
+// Heartbeat
+// ============================================================================
+
+message HeartbeatRequest {
+  Platform platform = 1;
+  google.protobuf.Timestamp timestamp = 2;
+
+  oneof platform_info {
+    K8sClusterInfo k8s = 10;
+    LinuxNodeInfo linux = 11;
+    WindowsNodeInfo windows = 12;
+  }
+
+  int32 active_tasks = 20;
+  AgentMetrics metrics = 21;
+  PlatformCapabilities capabilities = 22; // Platform capabilities
+  CloudInfo cloud_info = 23;         // Cloud provider information (detected at startup)
+}
+
+message K8sClusterInfo {
+  string k8s_version = 1;
+  int32 node_count = 2;
+  int32 namespace_count = 3;
+  ClusterHealth health = 4;
+}
+
+message LinuxNodeInfo {
+  string hostname = 1;
+  string os_version = 2;
+  string kernel_version = 3;
+  string architecture = 4;          // amd64, arm64
+  NodeHealth health = 5;
+}
+
+message WindowsNodeInfo {
+  string hostname = 1;
+  string os_version = 2;
+  string build_number = 3;
+  string architecture = 4;
+  NodeHealth health = 5;
+}
+
+message ClusterHealth {
+  bool is_healthy = 1;
+  int32 deployment_count = 2;
+  int32 pod_count = 3;
+  int32 pod_running = 4;
+  int32 pod_failed = 5;
+  string cpu_usage = 6;
+  string memory_usage = 7;
+}
+
+message NodeHealth {
+  bool is_healthy = 1;
+  string cpu_usage = 2;
+  string memory_usage = 3;
+  string disk_usage = 4;
+  int32 process_count = 5;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+  int32 next_interval_seconds = 2;
+  google.protobuf.Timestamp server_time = 3;
+  repeated string warnings = 4;     // Warnings from backend (e.g., version mismatch)
+  UpdateInfo update_info = 5;       // Update information if available
+}
+
+message HealthCheckRequest {
+  string request_id = 1;            // Unique request ID for correlation
+  bool include_executor_details = 2; // Include detailed executor status
+  bool include_metrics = 3;         // Include resource metrics
+  bool include_logs = 4;            // Include recent error logs
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTH_STATUS_HEALTHY = 1;
+  HEALTH_STATUS_DEGRADED = 2;
+  HEALTH_STATUS_UNHEALTHY = 3;
+  HEALTH_STATUS_UNKNOWN = 4;
+}
+
+// ============================================================================
+// Configuration Updates
+// ============================================================================
+
+message ConfigUpdate {
+  string version = 1;               // Config version
+  int32 poll_interval_seconds = 2;
+  int32 heartbeat_interval_seconds = 3;
+  int32 max_concurrent_tasks = 4;
+  int32 event_buffer_size = 5;
+  map<string, string> settings = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// ============================================================================
+// Agent Updates
+// ============================================================================
+
+message UpdateNotification {
+  string current_version = 1;       // Current agent version
+  string new_version = 2;           // New version available
+  string download_url = 3;          // Binary download URL
+  string checksum = 4;              // SHA256 checksum
+  bool force_update = 5;            // Force immediate update
+  string release_notes = 6;         // Release notes
+  google.protobuf.Timestamp released_at = 7;
+}
+
+// Welcome message sent when agent connects
+message WelcomeMessage {
+  string server_version = 1;        // Backend server version
+  string message = 2;               // Welcome message text
+  map<string, string> capabilities = 3; // Server capabilities/features
+}
+
+message UpdateInfo {
+  bool update_available = 1;
+  string new_version = 2;
+  string download_url = 3;
+  string checksum = 4;
+  bool critical = 5;                // Critical security update
+}

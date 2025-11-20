@@ -1,0 +1,7 @@
+{
+  "target_token": "550e8400-e29b-41d4-a716-446655440000:3f8a2c1e9b4d7f06",
+  "do_token": "dop_v1_abcdef1234567890",
+  "backend_url": "localhost:9090",
+  "update_check_interval": "5m",
+  "heartbeat_interval": "30s"
+}

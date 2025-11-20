@@ -1,0 +1,26 @@
+[Unit]
+Description=Tenatrix Agent
+After=network.target
+Documentation=https://github.com/calyra-tenatrix/agent
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/tenatrix-agent run
+Restart=always
+RestartSec=5
+User=root
+
+# Auto-restart on successful exit (for updates)
+RestartForceExitStatus=0
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tenatrix-agent
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
