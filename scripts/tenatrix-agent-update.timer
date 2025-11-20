@@ -1,0 +1,11 @@
+[Unit]
+Description=Tenatrix Agent Update Check Timer
+Documentation=https://github.com/calyra-tenatrix/agent
+
+[Timer]
+# Run every 1 minute
+OnBootSec=1min
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=timers.target

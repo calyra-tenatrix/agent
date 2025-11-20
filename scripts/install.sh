@@ -17,6 +17,37 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Retry function for curl downloads
+# Usage: retry_curl <url> <output_file>
+retry_curl() {
+  local url="$1"
+  local output="$2"
+  local max_attempts=5
+  local wait_time=10
+  local attempt=1
+
+  while [ $attempt -le $max_attempts ]; do
+    echo -e "${YELLOW}Attempt $attempt of $max_attempts...${NC}"
+
+    if curl -fsSL "$url" -o "$output"; then
+      echo -e "${GREEN}✅ Download successful${NC}"
+      return 0
+    else
+      echo -e "${YELLOW}⚠️  Download failed (HTTP error or timeout)${NC}"
+
+      if [ $attempt -lt $max_attempts ]; then
+        echo -e "${YELLOW}Waiting ${wait_time} seconds before retry...${NC}"
+        sleep $wait_time
+      fi
+    fi
+
+    attempt=$((attempt + 1))
+  done
+
+  echo -e "${RED}❌ Failed after $max_attempts attempts${NC}"
+  return 1
+}
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -80,19 +111,24 @@ echo ""
 # Download binary
 echo "⬇️  Downloading binary..."
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/${BINARY_NAME}"
-curl -fsSL "${DOWNLOAD_URL}" -o /tmp/${BINARY_NAME}
 
-if [ ! -f /tmp/${BINARY_NAME} ]; then
-  echo -e "${RED}❌ Failed to download binary${NC}"
+if ! retry_curl "${DOWNLOAD_URL}" "/tmp/${BINARY_NAME}"; then
   exit 1
 fi
 
-echo -e "${GREEN}✅ Binary downloaded${NC}"
+if [ ! -f /tmp/${BINARY_NAME} ]; then
+  echo -e "${RED}❌ Binary file not found after download${NC}"
+  exit 1
+fi
 
 # Download and verify checksum
-echo "🔐 Verifying checksum..."
+echo "🔐 Downloading checksums..."
 CHECKSUM_URL="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/checksums.txt"
-curl -fsSL "${CHECKSUM_URL}" -o /tmp/checksums.txt
+
+if ! retry_curl "${CHECKSUM_URL}" "/tmp/checksums.txt"; then
+  rm -f /tmp/${BINARY_NAME}
+  exit 1
+fi
 
 cd /tmp
 if sha256sum -c checksums.txt 2>&1 | grep -q "${BINARY_NAME}: OK"; then
@@ -162,20 +198,66 @@ EOF
 
 echo -e "${GREEN}✅ Systemd service created${NC}"
 
+# Create systemd timer service for auto-updates
+echo "⏰ Creating auto-update timer service..."
+cat > "/etc/systemd/system/tenatrix-agent-update.service" <<'EOF'
+[Unit]
+Description=Tenatrix Agent Update Check
+Documentation=https://github.com/calyra-tenatrix/agent
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/tenatrix-agent --mode update
+User=root
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tenatrix-agent-update
+EOF
+
+echo -e "${GREEN}✅ Update service created${NC}"
+
+# Create systemd timer for auto-updates
+echo "⏰ Creating auto-update timer..."
+cat > "/etc/systemd/system/tenatrix-agent-update.timer" <<'EOF'
+[Unit]
+Description=Tenatrix Agent Update Check Timer
+Documentation=https://github.com/calyra-tenatrix/agent
+
+[Timer]
+# Run every 1 minute
+OnBootSec=1min
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=timers.target
+EOF
+
+echo -e "${GREEN}✅ Update timer created${NC}"
+
 # Reload systemd
 echo "🔄 Reloading systemd..."
 systemctl daemon-reload
 echo -e "${GREEN}✅ Systemd reloaded${NC}"
 
-# Enable service
-echo "🚀 Enabling service..."
+# Enable and start agent service
+echo "🚀 Enabling agent service..."
 systemctl enable tenatrix-agent
-echo -e "${GREEN}✅ Service enabled${NC}"
+echo -e "${GREEN}✅ Agent service enabled${NC}"
 
-# Start service
-echo "▶️  Starting service..."
+echo "▶️  Starting agent service..."
 systemctl start tenatrix-agent
-echo -e "${GREEN}✅ Service started${NC}"
+echo -e "${GREEN}✅ Agent service started${NC}"
+
+# Enable and start update timer
+echo "⏰ Enabling auto-update timer..."
+systemctl enable tenatrix-agent-update.timer
+echo -e "${GREEN}✅ Auto-update timer enabled${NC}"
+
+echo "▶️  Starting auto-update timer..."
+systemctl start tenatrix-agent-update.timer
+echo -e "${GREEN}✅ Auto-update timer started${NC}"
 
 # Clean up
 rm -f /tmp/checksums.txt
@@ -186,10 +268,14 @@ echo -e "${GREEN}✅ Installation complete!${NC}"
 echo -e "${GREEN}================================${NC}"
 echo ""
 echo "Tenatrix Agent ${LATEST_VERSION} is now running."
+echo "Auto-update timer is active (checks every minute)."
 echo ""
 echo "Useful commands:"
-echo "  Check status:  sudo systemctl status tenatrix-agent"
-echo "  View logs:     sudo journalctl -u tenatrix-agent -f"
-echo "  Restart:       sudo systemctl restart tenatrix-agent"
-echo "  Stop:          sudo systemctl stop tenatrix-agent"
+echo "  Agent status:        sudo systemctl status tenatrix-agent"
+echo "  Agent logs:          sudo journalctl -u tenatrix-agent -f"
+echo "  Update timer status: sudo systemctl status tenatrix-agent-update.timer"
+echo "  Update logs:         sudo journalctl -u tenatrix-agent-update -f"
+echo "  Manual update check: sudo /usr/local/bin/tenatrix-agent --mode update"
+echo "  Restart agent:       sudo systemctl restart tenatrix-agent"
+echo "  Stop agent:          sudo systemctl stop tenatrix-agent"
 echo ""

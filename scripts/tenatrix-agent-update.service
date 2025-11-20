@@ -1,0 +1,13 @@
+[Unit]
+Description=Tenatrix Agent Update Check
+Documentation=https://github.com/calyra-tenatrix/agent
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/tenatrix-agent --mode update
+User=root
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tenatrix-agent-update
