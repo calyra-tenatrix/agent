@@ -80,9 +80,9 @@ echo ""
 # Download binary
 echo "⬇️  Downloading binary..."
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/${BINARY_NAME}"
-curl -fsSL "${DOWNLOAD_URL}" -o /tmp/tenatrix-agent
+curl -fsSL "${DOWNLOAD_URL}" -o /tmp/${BINARY_NAME}
 
-if [ ! -f /tmp/tenatrix-agent ]; then
+if [ ! -f /tmp/${BINARY_NAME} ]; then
   echo -e "${RED}❌ Failed to download binary${NC}"
   exit 1
 fi
@@ -99,13 +99,13 @@ if sha256sum -c checksums.txt 2>&1 | grep -q "${BINARY_NAME}: OK"; then
   echo -e "${GREEN}✅ Checksum verified${NC}"
 else
   echo -e "${RED}❌ Checksum verification failed!${NC}"
-  rm -f /tmp/tenatrix-agent /tmp/checksums.txt
+  rm -f /tmp/${BINARY_NAME} /tmp/checksums.txt
   exit 1
 fi
 
 # Install binary
 echo "📥 Installing binary..."
-mv /tmp/tenatrix-agent "${INSTALL_PATH}"
+mv /tmp/${BINARY_NAME} "${INSTALL_PATH}"
 chmod +x "${INSTALL_PATH}"
 echo -e "${GREEN}✅ Binary installed to ${INSTALL_PATH}${NC}"
 
