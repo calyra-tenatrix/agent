@@ -57,12 +57,6 @@ func (c *GRPCClient) Connect(ctx context.Context) error {
 	connectCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// Add agent version to context metadata
-	md := metadata.New(map[string]string{
-		"x-agent-version": c.agentVersion,
-	})
-	connectCtx = metadata.NewOutgoingContext(connectCtx, md)
-
 	conn, err := grpc.DialContext(connectCtx, c.backendURL, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to connect to backend: %w", err)
@@ -82,9 +76,10 @@ func (c *GRPCClient) OpenChannel(ctx context.Context) (agentv1.AgentService_Agen
 		return nil, fmt.Errorf("not connected to backend")
 	}
 
-	// Add authorization metadata
+	// Add authorization and agent version metadata
 	md := metadata.New(map[string]string{
-		"authorization": fmt.Sprintf("Bearer %s", c.targetToken),
+		"authorization":   fmt.Sprintf("Bearer %s", c.targetToken),
+		"x-agent-version": c.agentVersion,
 	})
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
