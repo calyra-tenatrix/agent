@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"strings"
@@ -9,7 +10,7 @@ import (
 
 	agentv1 "github.com/calyra-tenatrix/agent/internal/proto/agent/v1"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -39,10 +40,15 @@ func NewGRPCClient(backendURL, targetToken, agentVersion string) (*GRPCClient, e
 func (c *GRPCClient) Connect(ctx context.Context) error {
 	log.Printf("[gRPC] Connecting to backend: %s", c.backendURL)
 
-	// TODO: In production, use TLS credentials
+	tlsConfig := &tls.Config{
+		ServerName: c.backendURL,
+	}
+
+	creds := credentials.NewTLS(tlsConfig)
+
 	// For now, using insecure for local development
 	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(creds),
 		grpc.WithBlock(),
 	}
 
