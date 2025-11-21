@@ -38,7 +38,7 @@ func NewGRPCClient(backendURL, targetToken, agentVersion string) (*GRPCClient, e
 
 // Connect establishes a connection to the backend gRPC server
 func (c *GRPCClient) Connect(ctx context.Context) error {
-	log.Printf("[gRPC] Connecting to backend: %s", c.backendURL)
+	log.Printf("[gRPC] Connecting to backend: %s (agent version: %s)", c.backendURL, c.agentVersion)
 
 	tlsConfig := &tls.Config{
 		ServerName: c.backendURL,
@@ -46,15 +46,22 @@ func (c *GRPCClient) Connect(ctx context.Context) error {
 
 	creds := credentials.NewTLS(tlsConfig)
 
-	// For now, using insecure for local development
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(creds),
 		grpc.WithBlock(),
+		// Add agent version to user-agent header
+		grpc.WithUserAgent(fmt.Sprintf("tenatrix-agent/%s", c.agentVersion)),
 	}
 
 	// Set connection timeout
 	connectCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+
+	// Add agent version to context metadata
+	md := metadata.New(map[string]string{
+		"x-agent-version": c.agentVersion,
+	})
+	connectCtx = metadata.NewOutgoingContext(connectCtx, md)
 
 	conn, err := grpc.DialContext(connectCtx, c.backendURL, opts...)
 	if err != nil {
