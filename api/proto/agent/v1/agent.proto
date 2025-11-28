@@ -653,10 +653,16 @@ message AgentMetrics {
   int64 memory_usage_bytes = 1;
   double cpu_usage_percent = 2;
   int32 goroutine_count = 3;
-  int64 uptime_seconds = 4;
+  int64 uptime_seconds = 4;           // Agent uptime (process uptime)
   int64 tasks_completed = 5;
   int64 tasks_failed = 6;
   google.protobuf.Timestamp last_task_at = 7;
+
+  // System-level metrics (added for detailed monitoring)
+  int64 system_uptime_seconds = 8;    // Droplet/system uptime (not agent)
+  int64 memory_total_bytes = 9;       // Total system memory
+  int64 disk_usage_bytes = 10;        // Used disk space
+  int64 disk_total_bytes = 11;        // Total disk space
 }
 
 message ExecutorStatus {

@@ -28,7 +28,10 @@ type SystemInfo struct {
 	// Resource usage
 	CPUPercent     float64
 	MemoryUsed     int64
+	MemoryTotal    int64 // Total system memory (bytes)
 	MemoryPercent  float64
+	DiskUsed       int64 // Used disk space (bytes)
+	DiskTotal      int64 // Total disk space (bytes)
 	DiskPercent    float64
 	ProcessCount   int
 	GoroutineCount int
@@ -36,8 +39,9 @@ type SystemInfo struct {
 	// Cloud info
 	CloudRegion string
 
-	// Agent uptime
-	Uptime time.Duration
+	// Uptime
+	Uptime       time.Duration // Agent process uptime
+	SystemUptime time.Duration // Droplet/system uptime
 }
 
 var startTime = time.Now()
@@ -57,11 +61,13 @@ func Collect() (*SystemInfo, error) {
 	}
 	info.Hostname = hostname
 
-	// Get host info
+	// Get host info (includes system uptime)
 	hostInfo, err := host.Info()
 	if err == nil {
 		info.OSVersion = fmt.Sprintf("%s %s", hostInfo.Platform, hostInfo.PlatformVersion)
 		info.KernelVersion = hostInfo.KernelVersion
+		// System uptime (droplet uptime, not agent uptime)
+		info.SystemUptime = time.Duration(hostInfo.Uptime) * time.Second
 	}
 
 	// Get CPU usage
@@ -70,16 +76,19 @@ func Collect() (*SystemInfo, error) {
 		info.CPUPercent = cpuPercent[0]
 	}
 
-	// Get memory usage
+	// Get memory usage (used + total)
 	memInfo, err := mem.VirtualMemory()
 	if err == nil {
 		info.MemoryUsed = int64(memInfo.Used)
+		info.MemoryTotal = int64(memInfo.Total)
 		info.MemoryPercent = memInfo.UsedPercent
 	}
 
-	// Get disk usage
+	// Get disk usage (used + total)
 	diskInfo, err := disk.Usage("/")
 	if err == nil {
+		info.DiskUsed = int64(diskInfo.Used)
+		info.DiskTotal = int64(diskInfo.Total)
 		info.DiskPercent = diskInfo.UsedPercent
 	}
 

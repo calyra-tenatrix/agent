@@ -226,6 +226,11 @@ func (c *GRPCClient) SendHeartbeat(ctx context.Context, sysInfo *SystemInfo) err
 			UptimeSeconds:    int64(sysInfo.Uptime.Seconds()),
 			TasksCompleted:   0,
 			TasksFailed:      0,
+			// System-level metrics (new)
+			SystemUptimeSeconds: int64(sysInfo.SystemUptime.Seconds()),
+			MemoryTotalBytes:    sysInfo.MemoryTotal,
+			DiskUsageBytes:      sysInfo.DiskUsed,
+			DiskTotalBytes:      sysInfo.DiskTotal,
 		},
 		CloudInfo: &agentv1.CloudInfo{
 			Provider:        agentv1.CloudProvider_CLOUD_PROVIDER_DIGITALOCEAN,
