@@ -36,6 +36,8 @@ message AgentMessage {
     TaskResult task_result = 11;    // Task execution result
     EventBatch event_batch = 12;    // Platform events batch
     AgentStatus status = 13;        // Agent status update
+    ReconcileResult reconcile_result = 14; // Infrastructure reconciliation result
+    ActualInfrastructure actual_infrastructure = 15; // Periodic infrastructure state report
   }
 }
 
@@ -54,6 +56,7 @@ message BackendMessage {
     HealthCheckRequest health_check_request = 13; // On-demand health check
     UpdateNotification update_notification = 14; // Agent update available
     WelcomeMessage welcome = 15;    // Connection welcome/acknowledgment
+    ReconcileTask reconcile_task = 16; // Infrastructure reconciliation task
   }
 }
 
@@ -811,4 +814,230 @@ message UpdateInfo {
   string download_url = 3;
   string checksum = 4;
   bool critical = 5;                // Critical security update
+}
+
+// ============================================================================
+// Infrastructure Reconciliation System
+// ============================================================================
+
+// ReconcileTask - Backend'den Agent'a gönderilen reconciliation görevi
+message ReconcileTask {
+  string task_id = 1;                           // Benzersiz task ID
+  DesiredInfrastructure desired = 2;            // İstenen infrastructure durumu
+  bool dry_run = 3;                             // true = sadece diff hesapla, uygulama
+  int32 timeout_seconds = 4;                    // Task timeout (varsayılan: 300)
+}
+
+// ReconcileResult - Agent'tan Backend'e dönen reconciliation sonucu
+message ReconcileResult {
+  string task_id = 1;
+  bool success = 2;
+  bool dry_run = 3;
+  repeated DiffItem planned_changes = 4;        // Planlanan değişiklikler (dry_run için)
+  repeated DiffItem applied_changes = 5;        // Uygulanan değişiklikler
+  repeated string logs = 6;                     // Execution log'ları
+  ErrorInfo error = 7;                          // Hata bilgisi (varsa)
+  google.protobuf.Timestamp started_at = 8;
+  google.protobuf.Timestamp completed_at = 9;
+}
+
+// ============================================================================
+// Desired Infrastructure State (Backend -> Agent)
+// ============================================================================
+
+// DesiredInfrastructure - Kullanıcının istediği infrastructure durumu
+message DesiredInfrastructure {
+  int64 version = 1;                            // Monotonic increasing version
+  string application_id = 2;                    // Uygulama ID
+  string environment = 3;                       // "test" | "prod"
+  string target_id = 4;                         // Hedef target UUID
+
+  // Resource tanımları
+  repeated ServiceSpec services = 10;
+  repeated DatabaseSpec databases = 11;
+  repeated QueueSpec queues = 12;
+  repeated StorageSpec storages = 13;
+
+  // Bağlantı tanımları
+  repeated ConnectionSpec connections = 20;
+}
+
+// ServiceSpec - Service/Container tanımı
+message ServiceSpec {
+  string id = 1;                                // Benzersiz ID
+  string name = 2;                              // Service adı
+  string image = 3;                             // Docker image (e.g., "nginx:latest")
+  int32 replicas = 4;                           // Replica sayısı
+  map<string, string> env = 5;                  // Environment variables
+  repeated PortMapping ports = 6;               // Port mappings
+  ResourceLimits resource_limits = 7;           // CPU/Memory limitleri
+  string network = 8;                           // Docker network adı
+  repeated string depends_on = 9;               // Bağımlı service'ler
+  HealthCheckConfig health_check = 10;          // Health check config
+  map<string, string> labels = 11;              // Docker labels
+  repeated VolumeMount volumes = 12;            // Volume mount'ları
+  string restart_policy = 13;                   // always, on-failure, unless-stopped
+}
+
+// ResourceLimits - CPU ve Memory limitleri
+message ResourceLimits {
+  string cpu_limit = 1;                         // e.g., "0.5", "2"
+  string memory_limit = 2;                      // e.g., "512m", "2g"
+  string cpu_reservation = 3;                   // CPU reservation
+  string memory_reservation = 4;                // Memory reservation
+}
+
+// DatabaseSpec - Database tanımı
+message DatabaseSpec {
+  string id = 1;
+  string name = 2;
+  string engine = 3;                            // postgres, mysql, mongodb, redis
+  string version = 4;                           // e.g., "15", "8.0"
+  string image = 5;                             // Docker image (override)
+  map<string, string> env = 6;                  // Environment variables
+  repeated PortMapping ports = 7;
+  ResourceLimits resource_limits = 8;
+  string data_volume = 9;                       // Data volume path
+  map<string, string> config = 10;              // Database-specific config
+}
+
+// QueueSpec - Message Queue tanımı
+message QueueSpec {
+  string id = 1;
+  string name = 2;
+  string engine = 3;                            // rabbitmq, kafka, redis
+  string version = 4;
+  string image = 5;
+  map<string, string> env = 6;
+  repeated PortMapping ports = 7;
+  ResourceLimits resource_limits = 8;
+  string data_volume = 9;
+  map<string, string> config = 10;
+}
+
+// StorageSpec - Storage tanımı (S3-compatible, etc.)
+message StorageSpec {
+  string id = 1;
+  string name = 2;
+  string provider = 3;                          // minio, local
+  string image = 4;
+  map<string, string> env = 5;
+  repeated PortMapping ports = 6;
+  ResourceLimits resource_limits = 7;
+  string data_volume = 8;
+}
+
+// ConnectionSpec - Resource'lar arası bağlantı tanımı
+message ConnectionSpec {
+  string id = 1;
+  string source_id = 2;                         // Kaynak resource ID
+  string target_id = 3;                         // Hedef resource ID
+  string connection_type = 4;                   // dependency, data_flow, auth
+  map<string, string> config = 5;               // Bağlantı config'i
+}
+
+// ============================================================================
+// Actual Infrastructure State (Agent -> Backend)
+// ============================================================================
+
+// ActualInfrastructure - Agent'ın raporladığı gerçek infrastructure durumu
+message ActualInfrastructure {
+  string target_id = 1;
+  google.protobuf.Timestamp collected_at = 2;
+
+  repeated ServiceStatus services = 10;
+  repeated DatabaseStatus databases = 11;
+  repeated QueueStatus queues = 12;
+  repeated StorageStatus storages = 13;
+}
+
+// ServiceStatus - Çalışan service'in durumu
+message ServiceStatus {
+  string id = 1;                                // Tenatrix ID (label'dan)
+  string container_id = 2;                      // Docker container ID
+  string name = 3;                              // Container adı
+  string image = 4;                             // Çalışan image
+  string status = 5;                            // running, stopped, paused, error
+  int32 ready_replicas = 6;                     // Hazır replica sayısı
+  int32 desired_replicas = 7;                   // İstenen replica sayısı
+  repeated PortMapping ports = 8;               // Açık portlar
+  ResourceUsage resource_usage = 9;             // Anlık kaynak kullanımı
+  google.protobuf.Timestamp started_at = 10;
+  google.protobuf.Timestamp last_updated = 11;
+  string health_status = 12;                    // healthy, unhealthy, unknown
+  map<string, string> labels = 13;              // Container labels
+}
+
+// ResourceUsage - Anlık kaynak kullanımı
+message ResourceUsage {
+  double cpu_percent = 1;
+  int64 memory_bytes = 2;
+  int64 memory_limit_bytes = 3;
+  int64 network_rx_bytes = 4;
+  int64 network_tx_bytes = 5;
+  int64 disk_read_bytes = 6;
+  int64 disk_write_bytes = 7;
+}
+
+// DatabaseStatus - Veritabanı durumu
+message DatabaseStatus {
+  string id = 1;
+  string container_id = 2;
+  string name = 3;
+  string engine = 4;
+  string version = 5;
+  string status = 6;
+  bool is_accepting_connections = 7;
+  int32 active_connections = 8;
+  google.protobuf.Timestamp started_at = 9;
+}
+
+// QueueStatus - Message queue durumu
+message QueueStatus {
+  string id = 1;
+  string container_id = 2;
+  string name = 3;
+  string engine = 4;
+  string status = 5;
+  int64 message_count = 6;                      // Bekleyen mesaj sayısı
+  int32 consumer_count = 7;                     // Bağlı consumer sayısı
+  google.protobuf.Timestamp started_at = 8;
+}
+
+// StorageStatus - Storage durumu
+message StorageStatus {
+  string id = 1;
+  string container_id = 2;
+  string name = 3;
+  string provider = 4;
+  string status = 5;
+  int64 used_bytes = 6;
+  int64 total_bytes = 7;
+  google.protobuf.Timestamp started_at = 8;
+}
+
+// ============================================================================
+// Diff Types
+// ============================================================================
+
+// DiffItem - Tek bir değişiklik öğesi
+message DiffItem {
+  DiffAction action = 1;                        // CREATE, UPDATE, DELETE
+  string resource_type = 2;                     // service, database, queue, storage
+  string resource_id = 3;                       // Resource ID
+  string resource_name = 4;                     // Human-readable isim
+  google.protobuf.Struct before = 5;            // Önceki durum (JSON)
+  google.protobuf.Struct after = 6;             // Sonraki durum (JSON)
+  repeated string changes = 7;                  // Human-readable değişiklik listesi
+  bool applied = 8;                             // Bu değişiklik uygulandı mı?
+  string error_message = 9;                     // Hata mesajı (varsa)
+}
+
+// DiffAction - Değişiklik türü
+enum DiffAction {
+  DIFF_ACTION_UNSPECIFIED = 0;
+  DIFF_ACTION_CREATE = 1;                       // Yeni resource oluştur
+  DIFF_ACTION_UPDATE = 2;                       // Mevcut resource'u güncelle
+  DIFF_ACTION_DELETE = 3;                       // Resource'u sil
+  DIFF_ACTION_UNCHANGED = 4;                    // Değişiklik yok (bilgi amaçlı)
 }

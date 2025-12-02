@@ -935,6 +935,62 @@ func (HealthStatus) EnumDescriptor() ([]byte, []int) {
 	return file_agent_proto_rawDescGZIP(), []int{15}
 }
 
+// DiffAction - Değişiklik türü
+type DiffAction int32
+
+const (
+	DiffAction_DIFF_ACTION_UNSPECIFIED DiffAction = 0
+	DiffAction_DIFF_ACTION_CREATE      DiffAction = 1 // Yeni resource oluştur
+	DiffAction_DIFF_ACTION_UPDATE      DiffAction = 2 // Mevcut resource'u güncelle
+	DiffAction_DIFF_ACTION_DELETE      DiffAction = 3 // Resource'u sil
+	DiffAction_DIFF_ACTION_UNCHANGED   DiffAction = 4 // Değişiklik yok (bilgi amaçlı)
+)
+
+// Enum value maps for DiffAction.
+var (
+	DiffAction_name = map[int32]string{
+		0: "DIFF_ACTION_UNSPECIFIED",
+		1: "DIFF_ACTION_CREATE",
+		2: "DIFF_ACTION_UPDATE",
+		3: "DIFF_ACTION_DELETE",
+		4: "DIFF_ACTION_UNCHANGED",
+	}
+	DiffAction_value = map[string]int32{
+		"DIFF_ACTION_UNSPECIFIED": 0,
+		"DIFF_ACTION_CREATE":      1,
+		"DIFF_ACTION_UPDATE":      2,
+		"DIFF_ACTION_DELETE":      3,
+		"DIFF_ACTION_UNCHANGED":   4,
+	}
+)
+
+func (x DiffAction) Enum() *DiffAction {
+	p := new(DiffAction)
+	*p = x
+	return p
+}
+
+func (x DiffAction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DiffAction) Descriptor() protoreflect.EnumDescriptor {
+	return file_agent_proto_enumTypes[16].Descriptor()
+}
+
+func (DiffAction) Type() protoreflect.EnumType {
+	return &file_agent_proto_enumTypes[16]
+}
+
+func (x DiffAction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DiffAction.Descriptor instead.
+func (DiffAction) EnumDescriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{16}
+}
+
 type AgentMessage struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	AgentVersion string                 `protobuf:"bytes,1,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"` // Agent version (e.g., "1.0.0")
@@ -946,6 +1002,8 @@ type AgentMessage struct {
 	//	*AgentMessage_TaskResult
 	//	*AgentMessage_EventBatch
 	//	*AgentMessage_Status
+	//	*AgentMessage_ReconcileResult
+	//	*AgentMessage_ActualInfrastructure
 	Payload       isAgentMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1045,6 +1103,24 @@ func (x *AgentMessage) GetStatus() *AgentStatus {
 	return nil
 }
 
+func (x *AgentMessage) GetReconcileResult() *ReconcileResult {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentMessage_ReconcileResult); ok {
+			return x.ReconcileResult
+		}
+	}
+	return nil
+}
+
+func (x *AgentMessage) GetActualInfrastructure() *ActualInfrastructure {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentMessage_ActualInfrastructure); ok {
+			return x.ActualInfrastructure
+		}
+	}
+	return nil
+}
+
 type isAgentMessage_Payload interface {
 	isAgentMessage_Payload()
 }
@@ -1065,6 +1141,14 @@ type AgentMessage_Status struct {
 	Status *AgentStatus `protobuf:"bytes,13,opt,name=status,proto3,oneof"` // Agent status update
 }
 
+type AgentMessage_ReconcileResult struct {
+	ReconcileResult *ReconcileResult `protobuf:"bytes,14,opt,name=reconcile_result,json=reconcileResult,proto3,oneof"` // Infrastructure reconciliation result
+}
+
+type AgentMessage_ActualInfrastructure struct {
+	ActualInfrastructure *ActualInfrastructure `protobuf:"bytes,15,opt,name=actual_infrastructure,json=actualInfrastructure,proto3,oneof"` // Periodic infrastructure state report
+}
+
 func (*AgentMessage_TaskAck) isAgentMessage_Payload() {}
 
 func (*AgentMessage_TaskResult) isAgentMessage_Payload() {}
@@ -1072,6 +1156,10 @@ func (*AgentMessage_TaskResult) isAgentMessage_Payload() {}
 func (*AgentMessage_EventBatch) isAgentMessage_Payload() {}
 
 func (*AgentMessage_Status) isAgentMessage_Payload() {}
+
+func (*AgentMessage_ReconcileResult) isAgentMessage_Payload() {}
+
+func (*AgentMessage_ActualInfrastructure) isAgentMessage_Payload() {}
 
 type BackendMessage struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
@@ -1085,6 +1173,7 @@ type BackendMessage struct {
 	//	*BackendMessage_HealthCheckRequest
 	//	*BackendMessage_UpdateNotification
 	//	*BackendMessage_Welcome
+	//	*BackendMessage_ReconcileTask
 	Payload       isBackendMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1195,6 +1284,15 @@ func (x *BackendMessage) GetWelcome() *WelcomeMessage {
 	return nil
 }
 
+func (x *BackendMessage) GetReconcileTask() *ReconcileTask {
+	if x != nil {
+		if x, ok := x.Payload.(*BackendMessage_ReconcileTask); ok {
+			return x.ReconcileTask
+		}
+	}
+	return nil
+}
+
 type isBackendMessage_Payload interface {
 	isBackendMessage_Payload()
 }
@@ -1223,6 +1321,10 @@ type BackendMessage_Welcome struct {
 	Welcome *WelcomeMessage `protobuf:"bytes,15,opt,name=welcome,proto3,oneof"` // Connection welcome/acknowledgment
 }
 
+type BackendMessage_ReconcileTask struct {
+	ReconcileTask *ReconcileTask `protobuf:"bytes,16,opt,name=reconcile_task,json=reconcileTask,proto3,oneof"` // Infrastructure reconciliation task
+}
+
 func (*BackendMessage_Task) isBackendMessage_Payload() {}
 
 func (*BackendMessage_ConfigUpdate) isBackendMessage_Payload() {}
@@ -1234,6 +1336,8 @@ func (*BackendMessage_HealthCheckRequest) isBackendMessage_Payload() {}
 func (*BackendMessage_UpdateNotification) isBackendMessage_Payload() {}
 
 func (*BackendMessage_Welcome) isBackendMessage_Payload() {}
+
+func (*BackendMessage_ReconcileTask) isBackendMessage_Payload() {}
 
 // CloudInfo contains detected cloud provider information
 type CloudInfo struct {
@@ -6422,11 +6526,1661 @@ func (x *UpdateInfo) GetCritical() bool {
 	return false
 }
 
+// ReconcileTask - Backend'den Agent'a gönderilen reconciliation görevi
+type ReconcileTask struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	TaskId         string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`                          // Benzersiz task ID
+	Desired        *DesiredInfrastructure `protobuf:"bytes,2,opt,name=desired,proto3" json:"desired,omitempty"`                                      // İstenen infrastructure durumu
+	DryRun         bool                   `protobuf:"varint,3,opt,name=dry_run,json=dryRun,proto3" json:"dry_run,omitempty"`                         // true = sadece diff hesapla, uygulama
+	TimeoutSeconds int32                  `protobuf:"varint,4,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"` // Task timeout (varsayılan: 300)
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ReconcileTask) Reset() {
+	*x = ReconcileTask{}
+	mi := &file_agent_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReconcileTask) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReconcileTask) ProtoMessage() {}
+
+func (x *ReconcileTask) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReconcileTask.ProtoReflect.Descriptor instead.
+func (*ReconcileTask) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *ReconcileTask) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *ReconcileTask) GetDesired() *DesiredInfrastructure {
+	if x != nil {
+		return x.Desired
+	}
+	return nil
+}
+
+func (x *ReconcileTask) GetDryRun() bool {
+	if x != nil {
+		return x.DryRun
+	}
+	return false
+}
+
+func (x *ReconcileTask) GetTimeoutSeconds() int32 {
+	if x != nil {
+		return x.TimeoutSeconds
+	}
+	return 0
+}
+
+// ReconcileResult - Agent'tan Backend'e dönen reconciliation sonucu
+type ReconcileResult struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	TaskId         string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Success        bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	DryRun         bool                   `protobuf:"varint,3,opt,name=dry_run,json=dryRun,proto3" json:"dry_run,omitempty"`
+	PlannedChanges []*DiffItem            `protobuf:"bytes,4,rep,name=planned_changes,json=plannedChanges,proto3" json:"planned_changes,omitempty"` // Planlanan değişiklikler (dry_run için)
+	AppliedChanges []*DiffItem            `protobuf:"bytes,5,rep,name=applied_changes,json=appliedChanges,proto3" json:"applied_changes,omitempty"` // Uygulanan değişiklikler
+	Logs           []string               `protobuf:"bytes,6,rep,name=logs,proto3" json:"logs,omitempty"`                                           // Execution log'ları
+	Error          *ErrorInfo             `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`                                         // Hata bilgisi (varsa)
+	StartedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	CompletedAt    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ReconcileResult) Reset() {
+	*x = ReconcileResult{}
+	mi := &file_agent_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReconcileResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReconcileResult) ProtoMessage() {}
+
+func (x *ReconcileResult) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReconcileResult.ProtoReflect.Descriptor instead.
+func (*ReconcileResult) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *ReconcileResult) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *ReconcileResult) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *ReconcileResult) GetDryRun() bool {
+	if x != nil {
+		return x.DryRun
+	}
+	return false
+}
+
+func (x *ReconcileResult) GetPlannedChanges() []*DiffItem {
+	if x != nil {
+		return x.PlannedChanges
+	}
+	return nil
+}
+
+func (x *ReconcileResult) GetAppliedChanges() []*DiffItem {
+	if x != nil {
+		return x.AppliedChanges
+	}
+	return nil
+}
+
+func (x *ReconcileResult) GetLogs() []string {
+	if x != nil {
+		return x.Logs
+	}
+	return nil
+}
+
+func (x *ReconcileResult) GetError() *ErrorInfo {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+func (x *ReconcileResult) GetStartedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartedAt
+	}
+	return nil
+}
+
+func (x *ReconcileResult) GetCompletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CompletedAt
+	}
+	return nil
+}
+
+// DesiredInfrastructure - Kullanıcının istediği infrastructure durumu
+type DesiredInfrastructure struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       int64                  `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`                                 // Monotonic increasing version
+	ApplicationId string                 `protobuf:"bytes,2,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"` // Uygulama ID
+	Environment   string                 `protobuf:"bytes,3,opt,name=environment,proto3" json:"environment,omitempty"`                          // "test" | "prod"
+	TargetId      string                 `protobuf:"bytes,4,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`                // Hedef target UUID
+	// Resource tanımları
+	Services  []*ServiceSpec  `protobuf:"bytes,10,rep,name=services,proto3" json:"services,omitempty"`
+	Databases []*DatabaseSpec `protobuf:"bytes,11,rep,name=databases,proto3" json:"databases,omitempty"`
+	Queues    []*QueueSpec    `protobuf:"bytes,12,rep,name=queues,proto3" json:"queues,omitempty"`
+	Storages  []*StorageSpec  `protobuf:"bytes,13,rep,name=storages,proto3" json:"storages,omitempty"`
+	// Bağlantı tanımları
+	Connections   []*ConnectionSpec `protobuf:"bytes,20,rep,name=connections,proto3" json:"connections,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DesiredInfrastructure) Reset() {
+	*x = DesiredInfrastructure{}
+	mi := &file_agent_proto_msgTypes[70]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DesiredInfrastructure) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DesiredInfrastructure) ProtoMessage() {}
+
+func (x *DesiredInfrastructure) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[70]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DesiredInfrastructure.ProtoReflect.Descriptor instead.
+func (*DesiredInfrastructure) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{70}
+}
+
+func (x *DesiredInfrastructure) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *DesiredInfrastructure) GetApplicationId() string {
+	if x != nil {
+		return x.ApplicationId
+	}
+	return ""
+}
+
+func (x *DesiredInfrastructure) GetEnvironment() string {
+	if x != nil {
+		return x.Environment
+	}
+	return ""
+}
+
+func (x *DesiredInfrastructure) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *DesiredInfrastructure) GetServices() []*ServiceSpec {
+	if x != nil {
+		return x.Services
+	}
+	return nil
+}
+
+func (x *DesiredInfrastructure) GetDatabases() []*DatabaseSpec {
+	if x != nil {
+		return x.Databases
+	}
+	return nil
+}
+
+func (x *DesiredInfrastructure) GetQueues() []*QueueSpec {
+	if x != nil {
+		return x.Queues
+	}
+	return nil
+}
+
+func (x *DesiredInfrastructure) GetStorages() []*StorageSpec {
+	if x != nil {
+		return x.Storages
+	}
+	return nil
+}
+
+func (x *DesiredInfrastructure) GetConnections() []*ConnectionSpec {
+	if x != nil {
+		return x.Connections
+	}
+	return nil
+}
+
+// ServiceSpec - Service/Container tanımı
+type ServiceSpec struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                                                    // Benzersiz ID
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                                                                // Service adı
+	Image          string                 `protobuf:"bytes,3,opt,name=image,proto3" json:"image,omitempty"`                                                                              // Docker image (e.g., "nginx:latest")
+	Replicas       int32                  `protobuf:"varint,4,opt,name=replicas,proto3" json:"replicas,omitempty"`                                                                       // Replica sayısı
+	Env            map[string]string      `protobuf:"bytes,5,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`        // Environment variables
+	Ports          []*PortMapping         `protobuf:"bytes,6,rep,name=ports,proto3" json:"ports,omitempty"`                                                                              // Port mappings
+	ResourceLimits *ResourceLimits        `protobuf:"bytes,7,opt,name=resource_limits,json=resourceLimits,proto3" json:"resource_limits,omitempty"`                                      // CPU/Memory limitleri
+	Network        string                 `protobuf:"bytes,8,opt,name=network,proto3" json:"network,omitempty"`                                                                          // Docker network adı
+	DependsOn      []string               `protobuf:"bytes,9,rep,name=depends_on,json=dependsOn,proto3" json:"depends_on,omitempty"`                                                     // Bağımlı service'ler
+	HealthCheck    *HealthCheckConfig     `protobuf:"bytes,10,opt,name=health_check,json=healthCheck,proto3" json:"health_check,omitempty"`                                              // Health check config
+	Labels         map[string]string      `protobuf:"bytes,11,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Docker labels
+	Volumes        []*VolumeMount         `protobuf:"bytes,12,rep,name=volumes,proto3" json:"volumes,omitempty"`                                                                         // Volume mount'ları
+	RestartPolicy  string                 `protobuf:"bytes,13,opt,name=restart_policy,json=restartPolicy,proto3" json:"restart_policy,omitempty"`                                        // always, on-failure, unless-stopped
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ServiceSpec) Reset() {
+	*x = ServiceSpec{}
+	mi := &file_agent_proto_msgTypes[71]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServiceSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServiceSpec) ProtoMessage() {}
+
+func (x *ServiceSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[71]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServiceSpec.ProtoReflect.Descriptor instead.
+func (*ServiceSpec) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{71}
+}
+
+func (x *ServiceSpec) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ServiceSpec) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ServiceSpec) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *ServiceSpec) GetReplicas() int32 {
+	if x != nil {
+		return x.Replicas
+	}
+	return 0
+}
+
+func (x *ServiceSpec) GetEnv() map[string]string {
+	if x != nil {
+		return x.Env
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetPorts() []*PortMapping {
+	if x != nil {
+		return x.Ports
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetResourceLimits() *ResourceLimits {
+	if x != nil {
+		return x.ResourceLimits
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetNetwork() string {
+	if x != nil {
+		return x.Network
+	}
+	return ""
+}
+
+func (x *ServiceSpec) GetDependsOn() []string {
+	if x != nil {
+		return x.DependsOn
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetHealthCheck() *HealthCheckConfig {
+	if x != nil {
+		return x.HealthCheck
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetVolumes() []*VolumeMount {
+	if x != nil {
+		return x.Volumes
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetRestartPolicy() string {
+	if x != nil {
+		return x.RestartPolicy
+	}
+	return ""
+}
+
+// ResourceLimits - CPU ve Memory limitleri
+type ResourceLimits struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	CpuLimit          string                 `protobuf:"bytes,1,opt,name=cpu_limit,json=cpuLimit,proto3" json:"cpu_limit,omitempty"`                            // e.g., "0.5", "2"
+	MemoryLimit       string                 `protobuf:"bytes,2,opt,name=memory_limit,json=memoryLimit,proto3" json:"memory_limit,omitempty"`                   // e.g., "512m", "2g"
+	CpuReservation    string                 `protobuf:"bytes,3,opt,name=cpu_reservation,json=cpuReservation,proto3" json:"cpu_reservation,omitempty"`          // CPU reservation
+	MemoryReservation string                 `protobuf:"bytes,4,opt,name=memory_reservation,json=memoryReservation,proto3" json:"memory_reservation,omitempty"` // Memory reservation
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ResourceLimits) Reset() {
+	*x = ResourceLimits{}
+	mi := &file_agent_proto_msgTypes[72]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceLimits) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceLimits) ProtoMessage() {}
+
+func (x *ResourceLimits) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[72]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceLimits.ProtoReflect.Descriptor instead.
+func (*ResourceLimits) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{72}
+}
+
+func (x *ResourceLimits) GetCpuLimit() string {
+	if x != nil {
+		return x.CpuLimit
+	}
+	return ""
+}
+
+func (x *ResourceLimits) GetMemoryLimit() string {
+	if x != nil {
+		return x.MemoryLimit
+	}
+	return ""
+}
+
+func (x *ResourceLimits) GetCpuReservation() string {
+	if x != nil {
+		return x.CpuReservation
+	}
+	return ""
+}
+
+func (x *ResourceLimits) GetMemoryReservation() string {
+	if x != nil {
+		return x.MemoryReservation
+	}
+	return ""
+}
+
+// DatabaseSpec - Database tanımı
+type DatabaseSpec struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Engine         string                 `protobuf:"bytes,3,opt,name=engine,proto3" json:"engine,omitempty"`                                                                     // postgres, mysql, mongodb, redis
+	Version        string                 `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`                                                                   // e.g., "15", "8.0"
+	Image          string                 `protobuf:"bytes,5,opt,name=image,proto3" json:"image,omitempty"`                                                                       // Docker image (override)
+	Env            map[string]string      `protobuf:"bytes,6,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables
+	Ports          []*PortMapping         `protobuf:"bytes,7,rep,name=ports,proto3" json:"ports,omitempty"`
+	ResourceLimits *ResourceLimits        `protobuf:"bytes,8,opt,name=resource_limits,json=resourceLimits,proto3" json:"resource_limits,omitempty"`
+	DataVolume     string                 `protobuf:"bytes,9,opt,name=data_volume,json=dataVolume,proto3" json:"data_volume,omitempty"`                                                  // Data volume path
+	Config         map[string]string      `protobuf:"bytes,10,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Database-specific config
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *DatabaseSpec) Reset() {
+	*x = DatabaseSpec{}
+	mi := &file_agent_proto_msgTypes[73]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DatabaseSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DatabaseSpec) ProtoMessage() {}
+
+func (x *DatabaseSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[73]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DatabaseSpec.ProtoReflect.Descriptor instead.
+func (*DatabaseSpec) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{73}
+}
+
+func (x *DatabaseSpec) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DatabaseSpec) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *DatabaseSpec) GetEngine() string {
+	if x != nil {
+		return x.Engine
+	}
+	return ""
+}
+
+func (x *DatabaseSpec) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *DatabaseSpec) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *DatabaseSpec) GetEnv() map[string]string {
+	if x != nil {
+		return x.Env
+	}
+	return nil
+}
+
+func (x *DatabaseSpec) GetPorts() []*PortMapping {
+	if x != nil {
+		return x.Ports
+	}
+	return nil
+}
+
+func (x *DatabaseSpec) GetResourceLimits() *ResourceLimits {
+	if x != nil {
+		return x.ResourceLimits
+	}
+	return nil
+}
+
+func (x *DatabaseSpec) GetDataVolume() string {
+	if x != nil {
+		return x.DataVolume
+	}
+	return ""
+}
+
+func (x *DatabaseSpec) GetConfig() map[string]string {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+// QueueSpec - Message Queue tanımı
+type QueueSpec struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Engine         string                 `protobuf:"bytes,3,opt,name=engine,proto3" json:"engine,omitempty"` // rabbitmq, kafka, redis
+	Version        string                 `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
+	Image          string                 `protobuf:"bytes,5,opt,name=image,proto3" json:"image,omitempty"`
+	Env            map[string]string      `protobuf:"bytes,6,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Ports          []*PortMapping         `protobuf:"bytes,7,rep,name=ports,proto3" json:"ports,omitempty"`
+	ResourceLimits *ResourceLimits        `protobuf:"bytes,8,opt,name=resource_limits,json=resourceLimits,proto3" json:"resource_limits,omitempty"`
+	DataVolume     string                 `protobuf:"bytes,9,opt,name=data_volume,json=dataVolume,proto3" json:"data_volume,omitempty"`
+	Config         map[string]string      `protobuf:"bytes,10,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *QueueSpec) Reset() {
+	*x = QueueSpec{}
+	mi := &file_agent_proto_msgTypes[74]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueueSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueueSpec) ProtoMessage() {}
+
+func (x *QueueSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[74]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueueSpec.ProtoReflect.Descriptor instead.
+func (*QueueSpec) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{74}
+}
+
+func (x *QueueSpec) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *QueueSpec) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *QueueSpec) GetEngine() string {
+	if x != nil {
+		return x.Engine
+	}
+	return ""
+}
+
+func (x *QueueSpec) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *QueueSpec) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *QueueSpec) GetEnv() map[string]string {
+	if x != nil {
+		return x.Env
+	}
+	return nil
+}
+
+func (x *QueueSpec) GetPorts() []*PortMapping {
+	if x != nil {
+		return x.Ports
+	}
+	return nil
+}
+
+func (x *QueueSpec) GetResourceLimits() *ResourceLimits {
+	if x != nil {
+		return x.ResourceLimits
+	}
+	return nil
+}
+
+func (x *QueueSpec) GetDataVolume() string {
+	if x != nil {
+		return x.DataVolume
+	}
+	return ""
+}
+
+func (x *QueueSpec) GetConfig() map[string]string {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+// StorageSpec - Storage tanımı (S3-compatible, etc.)
+type StorageSpec struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Provider       string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"` // minio, local
+	Image          string                 `protobuf:"bytes,4,opt,name=image,proto3" json:"image,omitempty"`
+	Env            map[string]string      `protobuf:"bytes,5,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Ports          []*PortMapping         `protobuf:"bytes,6,rep,name=ports,proto3" json:"ports,omitempty"`
+	ResourceLimits *ResourceLimits        `protobuf:"bytes,7,opt,name=resource_limits,json=resourceLimits,proto3" json:"resource_limits,omitempty"`
+	DataVolume     string                 `protobuf:"bytes,8,opt,name=data_volume,json=dataVolume,proto3" json:"data_volume,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *StorageSpec) Reset() {
+	*x = StorageSpec{}
+	mi := &file_agent_proto_msgTypes[75]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StorageSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StorageSpec) ProtoMessage() {}
+
+func (x *StorageSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[75]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StorageSpec.ProtoReflect.Descriptor instead.
+func (*StorageSpec) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{75}
+}
+
+func (x *StorageSpec) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *StorageSpec) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *StorageSpec) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *StorageSpec) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *StorageSpec) GetEnv() map[string]string {
+	if x != nil {
+		return x.Env
+	}
+	return nil
+}
+
+func (x *StorageSpec) GetPorts() []*PortMapping {
+	if x != nil {
+		return x.Ports
+	}
+	return nil
+}
+
+func (x *StorageSpec) GetResourceLimits() *ResourceLimits {
+	if x != nil {
+		return x.ResourceLimits
+	}
+	return nil
+}
+
+func (x *StorageSpec) GetDataVolume() string {
+	if x != nil {
+		return x.DataVolume
+	}
+	return ""
+}
+
+// ConnectionSpec - Resource'lar arası bağlantı tanımı
+type ConnectionSpec struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SourceId       string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`                                                       // Kaynak resource ID
+	TargetId       string                 `protobuf:"bytes,3,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`                                                       // Hedef resource ID
+	ConnectionType string                 `protobuf:"bytes,4,opt,name=connection_type,json=connectionType,proto3" json:"connection_type,omitempty"`                                     // dependency, data_flow, auth
+	Config         map[string]string      `protobuf:"bytes,5,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Bağlantı config'i
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ConnectionSpec) Reset() {
+	*x = ConnectionSpec{}
+	mi := &file_agent_proto_msgTypes[76]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConnectionSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConnectionSpec) ProtoMessage() {}
+
+func (x *ConnectionSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[76]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConnectionSpec.ProtoReflect.Descriptor instead.
+func (*ConnectionSpec) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{76}
+}
+
+func (x *ConnectionSpec) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ConnectionSpec) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *ConnectionSpec) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *ConnectionSpec) GetConnectionType() string {
+	if x != nil {
+		return x.ConnectionType
+	}
+	return ""
+}
+
+func (x *ConnectionSpec) GetConfig() map[string]string {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+// ActualInfrastructure - Agent'ın raporladığı gerçek infrastructure durumu
+type ActualInfrastructure struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TargetId      string                 `protobuf:"bytes,1,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	CollectedAt   *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=collected_at,json=collectedAt,proto3" json:"collected_at,omitempty"`
+	Services      []*ServiceStatus       `protobuf:"bytes,10,rep,name=services,proto3" json:"services,omitempty"`
+	Databases     []*DatabaseStatus      `protobuf:"bytes,11,rep,name=databases,proto3" json:"databases,omitempty"`
+	Queues        []*QueueStatus         `protobuf:"bytes,12,rep,name=queues,proto3" json:"queues,omitempty"`
+	Storages      []*StorageStatus       `protobuf:"bytes,13,rep,name=storages,proto3" json:"storages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ActualInfrastructure) Reset() {
+	*x = ActualInfrastructure{}
+	mi := &file_agent_proto_msgTypes[77]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ActualInfrastructure) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActualInfrastructure) ProtoMessage() {}
+
+func (x *ActualInfrastructure) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[77]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActualInfrastructure.ProtoReflect.Descriptor instead.
+func (*ActualInfrastructure) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{77}
+}
+
+func (x *ActualInfrastructure) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *ActualInfrastructure) GetCollectedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CollectedAt
+	}
+	return nil
+}
+
+func (x *ActualInfrastructure) GetServices() []*ServiceStatus {
+	if x != nil {
+		return x.Services
+	}
+	return nil
+}
+
+func (x *ActualInfrastructure) GetDatabases() []*DatabaseStatus {
+	if x != nil {
+		return x.Databases
+	}
+	return nil
+}
+
+func (x *ActualInfrastructure) GetQueues() []*QueueStatus {
+	if x != nil {
+		return x.Queues
+	}
+	return nil
+}
+
+func (x *ActualInfrastructure) GetStorages() []*StorageStatus {
+	if x != nil {
+		return x.Storages
+	}
+	return nil
+}
+
+// ServiceStatus - Çalışan service'in durumu
+type ServiceStatus struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                   // Tenatrix ID (label'dan)
+	ContainerId     string                 `protobuf:"bytes,2,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`              // Docker container ID
+	Name            string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`                                               // Container adı
+	Image           string                 `protobuf:"bytes,4,opt,name=image,proto3" json:"image,omitempty"`                                             // Çalışan image
+	Status          string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`                                           // running, stopped, paused, error
+	ReadyReplicas   int32                  `protobuf:"varint,6,opt,name=ready_replicas,json=readyReplicas,proto3" json:"ready_replicas,omitempty"`       // Hazır replica sayısı
+	DesiredReplicas int32                  `protobuf:"varint,7,opt,name=desired_replicas,json=desiredReplicas,proto3" json:"desired_replicas,omitempty"` // İstenen replica sayısı
+	Ports           []*PortMapping         `protobuf:"bytes,8,rep,name=ports,proto3" json:"ports,omitempty"`                                             // Açık portlar
+	ResourceUsage   *ResourceUsage         `protobuf:"bytes,9,opt,name=resource_usage,json=resourceUsage,proto3" json:"resource_usage,omitempty"`        // Anlık kaynak kullanımı
+	StartedAt       *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	LastUpdated     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
+	HealthStatus    string                 `protobuf:"bytes,12,opt,name=health_status,json=healthStatus,proto3" json:"health_status,omitempty"`                                           // healthy, unhealthy, unknown
+	Labels          map[string]string      `protobuf:"bytes,13,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Container labels
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ServiceStatus) Reset() {
+	*x = ServiceStatus{}
+	mi := &file_agent_proto_msgTypes[78]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServiceStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServiceStatus) ProtoMessage() {}
+
+func (x *ServiceStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[78]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServiceStatus.ProtoReflect.Descriptor instead.
+func (*ServiceStatus) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{78}
+}
+
+func (x *ServiceStatus) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ServiceStatus) GetContainerId() string {
+	if x != nil {
+		return x.ContainerId
+	}
+	return ""
+}
+
+func (x *ServiceStatus) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ServiceStatus) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *ServiceStatus) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ServiceStatus) GetReadyReplicas() int32 {
+	if x != nil {
+		return x.ReadyReplicas
+	}
+	return 0
+}
+
+func (x *ServiceStatus) GetDesiredReplicas() int32 {
+	if x != nil {
+		return x.DesiredReplicas
+	}
+	return 0
+}
+
+func (x *ServiceStatus) GetPorts() []*PortMapping {
+	if x != nil {
+		return x.Ports
+	}
+	return nil
+}
+
+func (x *ServiceStatus) GetResourceUsage() *ResourceUsage {
+	if x != nil {
+		return x.ResourceUsage
+	}
+	return nil
+}
+
+func (x *ServiceStatus) GetStartedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartedAt
+	}
+	return nil
+}
+
+func (x *ServiceStatus) GetLastUpdated() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastUpdated
+	}
+	return nil
+}
+
+func (x *ServiceStatus) GetHealthStatus() string {
+	if x != nil {
+		return x.HealthStatus
+	}
+	return ""
+}
+
+func (x *ServiceStatus) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+// ResourceUsage - Anlık kaynak kullanımı
+type ResourceUsage struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	CpuPercent       float64                `protobuf:"fixed64,1,opt,name=cpu_percent,json=cpuPercent,proto3" json:"cpu_percent,omitempty"`
+	MemoryBytes      int64                  `protobuf:"varint,2,opt,name=memory_bytes,json=memoryBytes,proto3" json:"memory_bytes,omitempty"`
+	MemoryLimitBytes int64                  `protobuf:"varint,3,opt,name=memory_limit_bytes,json=memoryLimitBytes,proto3" json:"memory_limit_bytes,omitempty"`
+	NetworkRxBytes   int64                  `protobuf:"varint,4,opt,name=network_rx_bytes,json=networkRxBytes,proto3" json:"network_rx_bytes,omitempty"`
+	NetworkTxBytes   int64                  `protobuf:"varint,5,opt,name=network_tx_bytes,json=networkTxBytes,proto3" json:"network_tx_bytes,omitempty"`
+	DiskReadBytes    int64                  `protobuf:"varint,6,opt,name=disk_read_bytes,json=diskReadBytes,proto3" json:"disk_read_bytes,omitempty"`
+	DiskWriteBytes   int64                  `protobuf:"varint,7,opt,name=disk_write_bytes,json=diskWriteBytes,proto3" json:"disk_write_bytes,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ResourceUsage) Reset() {
+	*x = ResourceUsage{}
+	mi := &file_agent_proto_msgTypes[79]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceUsage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceUsage) ProtoMessage() {}
+
+func (x *ResourceUsage) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[79]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceUsage.ProtoReflect.Descriptor instead.
+func (*ResourceUsage) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{79}
+}
+
+func (x *ResourceUsage) GetCpuPercent() float64 {
+	if x != nil {
+		return x.CpuPercent
+	}
+	return 0
+}
+
+func (x *ResourceUsage) GetMemoryBytes() int64 {
+	if x != nil {
+		return x.MemoryBytes
+	}
+	return 0
+}
+
+func (x *ResourceUsage) GetMemoryLimitBytes() int64 {
+	if x != nil {
+		return x.MemoryLimitBytes
+	}
+	return 0
+}
+
+func (x *ResourceUsage) GetNetworkRxBytes() int64 {
+	if x != nil {
+		return x.NetworkRxBytes
+	}
+	return 0
+}
+
+func (x *ResourceUsage) GetNetworkTxBytes() int64 {
+	if x != nil {
+		return x.NetworkTxBytes
+	}
+	return 0
+}
+
+func (x *ResourceUsage) GetDiskReadBytes() int64 {
+	if x != nil {
+		return x.DiskReadBytes
+	}
+	return 0
+}
+
+func (x *ResourceUsage) GetDiskWriteBytes() int64 {
+	if x != nil {
+		return x.DiskWriteBytes
+	}
+	return 0
+}
+
+// DatabaseStatus - Veritabanı durumu
+type DatabaseStatus struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ContainerId            string                 `protobuf:"bytes,2,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
+	Name                   string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Engine                 string                 `protobuf:"bytes,4,opt,name=engine,proto3" json:"engine,omitempty"`
+	Version                string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	Status                 string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	IsAcceptingConnections bool                   `protobuf:"varint,7,opt,name=is_accepting_connections,json=isAcceptingConnections,proto3" json:"is_accepting_connections,omitempty"`
+	ActiveConnections      int32                  `protobuf:"varint,8,opt,name=active_connections,json=activeConnections,proto3" json:"active_connections,omitempty"`
+	StartedAt              *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *DatabaseStatus) Reset() {
+	*x = DatabaseStatus{}
+	mi := &file_agent_proto_msgTypes[80]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DatabaseStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DatabaseStatus) ProtoMessage() {}
+
+func (x *DatabaseStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[80]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DatabaseStatus.ProtoReflect.Descriptor instead.
+func (*DatabaseStatus) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{80}
+}
+
+func (x *DatabaseStatus) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DatabaseStatus) GetContainerId() string {
+	if x != nil {
+		return x.ContainerId
+	}
+	return ""
+}
+
+func (x *DatabaseStatus) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *DatabaseStatus) GetEngine() string {
+	if x != nil {
+		return x.Engine
+	}
+	return ""
+}
+
+func (x *DatabaseStatus) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *DatabaseStatus) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *DatabaseStatus) GetIsAcceptingConnections() bool {
+	if x != nil {
+		return x.IsAcceptingConnections
+	}
+	return false
+}
+
+func (x *DatabaseStatus) GetActiveConnections() int32 {
+	if x != nil {
+		return x.ActiveConnections
+	}
+	return 0
+}
+
+func (x *DatabaseStatus) GetStartedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartedAt
+	}
+	return nil
+}
+
+// QueueStatus - Message queue durumu
+type QueueStatus struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ContainerId   string                 `protobuf:"bytes,2,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Engine        string                 `protobuf:"bytes,4,opt,name=engine,proto3" json:"engine,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	MessageCount  int64                  `protobuf:"varint,6,opt,name=message_count,json=messageCount,proto3" json:"message_count,omitempty"`    // Bekleyen mesaj sayısı
+	ConsumerCount int32                  `protobuf:"varint,7,opt,name=consumer_count,json=consumerCount,proto3" json:"consumer_count,omitempty"` // Bağlı consumer sayısı
+	StartedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueueStatus) Reset() {
+	*x = QueueStatus{}
+	mi := &file_agent_proto_msgTypes[81]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueueStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueueStatus) ProtoMessage() {}
+
+func (x *QueueStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[81]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueueStatus.ProtoReflect.Descriptor instead.
+func (*QueueStatus) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{81}
+}
+
+func (x *QueueStatus) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *QueueStatus) GetContainerId() string {
+	if x != nil {
+		return x.ContainerId
+	}
+	return ""
+}
+
+func (x *QueueStatus) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *QueueStatus) GetEngine() string {
+	if x != nil {
+		return x.Engine
+	}
+	return ""
+}
+
+func (x *QueueStatus) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *QueueStatus) GetMessageCount() int64 {
+	if x != nil {
+		return x.MessageCount
+	}
+	return 0
+}
+
+func (x *QueueStatus) GetConsumerCount() int32 {
+	if x != nil {
+		return x.ConsumerCount
+	}
+	return 0
+}
+
+func (x *QueueStatus) GetStartedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartedAt
+	}
+	return nil
+}
+
+// StorageStatus - Storage durumu
+type StorageStatus struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ContainerId   string                 `protobuf:"bytes,2,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Provider      string                 `protobuf:"bytes,4,opt,name=provider,proto3" json:"provider,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	UsedBytes     int64                  `protobuf:"varint,6,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
+	TotalBytes    int64                  `protobuf:"varint,7,opt,name=total_bytes,json=totalBytes,proto3" json:"total_bytes,omitempty"`
+	StartedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StorageStatus) Reset() {
+	*x = StorageStatus{}
+	mi := &file_agent_proto_msgTypes[82]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StorageStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StorageStatus) ProtoMessage() {}
+
+func (x *StorageStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[82]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StorageStatus.ProtoReflect.Descriptor instead.
+func (*StorageStatus) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{82}
+}
+
+func (x *StorageStatus) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *StorageStatus) GetContainerId() string {
+	if x != nil {
+		return x.ContainerId
+	}
+	return ""
+}
+
+func (x *StorageStatus) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *StorageStatus) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *StorageStatus) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *StorageStatus) GetUsedBytes() int64 {
+	if x != nil {
+		return x.UsedBytes
+	}
+	return 0
+}
+
+func (x *StorageStatus) GetTotalBytes() int64 {
+	if x != nil {
+		return x.TotalBytes
+	}
+	return 0
+}
+
+func (x *StorageStatus) GetStartedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartedAt
+	}
+	return nil
+}
+
+// DiffItem - Tek bir değişiklik öğesi
+type DiffItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Action        DiffAction             `protobuf:"varint,1,opt,name=action,proto3,enum=agent.v1.DiffAction" json:"action,omitempty"`       // CREATE, UPDATE, DELETE
+	ResourceType  string                 `protobuf:"bytes,2,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"` // service, database, queue, storage
+	ResourceId    string                 `protobuf:"bytes,3,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`       // Resource ID
+	ResourceName  string                 `protobuf:"bytes,4,opt,name=resource_name,json=resourceName,proto3" json:"resource_name,omitempty"` // Human-readable isim
+	Before        *structpb.Struct       `protobuf:"bytes,5,opt,name=before,proto3" json:"before,omitempty"`                                 // Önceki durum (JSON)
+	After         *structpb.Struct       `protobuf:"bytes,6,opt,name=after,proto3" json:"after,omitempty"`                                   // Sonraki durum (JSON)
+	Changes       []string               `protobuf:"bytes,7,rep,name=changes,proto3" json:"changes,omitempty"`                               // Human-readable değişiklik listesi
+	Applied       bool                   `protobuf:"varint,8,opt,name=applied,proto3" json:"applied,omitempty"`                              // Bu değişiklik uygulandı mı?
+	ErrorMessage  string                 `protobuf:"bytes,9,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"` // Hata mesajı (varsa)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DiffItem) Reset() {
+	*x = DiffItem{}
+	mi := &file_agent_proto_msgTypes[83]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DiffItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DiffItem) ProtoMessage() {}
+
+func (x *DiffItem) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[83]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DiffItem.ProtoReflect.Descriptor instead.
+func (*DiffItem) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{83}
+}
+
+func (x *DiffItem) GetAction() DiffAction {
+	if x != nil {
+		return x.Action
+	}
+	return DiffAction_DIFF_ACTION_UNSPECIFIED
+}
+
+func (x *DiffItem) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
+	}
+	return ""
+}
+
+func (x *DiffItem) GetResourceId() string {
+	if x != nil {
+		return x.ResourceId
+	}
+	return ""
+}
+
+func (x *DiffItem) GetResourceName() string {
+	if x != nil {
+		return x.ResourceName
+	}
+	return ""
+}
+
+func (x *DiffItem) GetBefore() *structpb.Struct {
+	if x != nil {
+		return x.Before
+	}
+	return nil
+}
+
+func (x *DiffItem) GetAfter() *structpb.Struct {
+	if x != nil {
+		return x.After
+	}
+	return nil
+}
+
+func (x *DiffItem) GetChanges() []string {
+	if x != nil {
+		return x.Changes
+	}
+	return nil
+}
+
+func (x *DiffItem) GetApplied() bool {
+	if x != nil {
+		return x.Applied
+	}
+	return false
+}
+
+func (x *DiffItem) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
 var File_agent_proto protoreflect.FileDescriptor
 
 const file_agent_proto_rawDesc = "" +
 	"\n" +
-	"\vagent.proto\x12\bagent.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xf6\x02\n" +
+	"\vagent.proto\x12\bagent.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\x95\x04\n" +
 	"\fAgentMessage\x12#\n" +
 	"\ragent_version\x18\x01 \x01(\tR\fagentVersion\x12.\n" +
 	"\bplatform\x18\x02 \x01(\x0e2\x12.agent.v1.PlatformR\bplatform\x123\n" +
@@ -6437,8 +8191,10 @@ const file_agent_proto_rawDesc = "" +
 	"taskResult\x127\n" +
 	"\vevent_batch\x18\f \x01(\v2\x14.agent.v1.EventBatchH\x00R\n" +
 	"eventBatch\x12/\n" +
-	"\x06status\x18\r \x01(\v2\x15.agent.v1.AgentStatusH\x00R\x06statusB\t\n" +
-	"\apayload\"\xef\x03\n" +
+	"\x06status\x18\r \x01(\v2\x15.agent.v1.AgentStatusH\x00R\x06status\x12F\n" +
+	"\x10reconcile_result\x18\x0e \x01(\v2\x19.agent.v1.ReconcileResultH\x00R\x0freconcileResult\x12U\n" +
+	"\x15actual_infrastructure\x18\x0f \x01(\v2\x1e.agent.v1.ActualInfrastructureH\x00R\x14actualInfrastructureB\t\n" +
+	"\apayload\"\xb1\x04\n" +
 	"\x0eBackendMessage\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x123\n" +
@@ -6449,7 +8205,8 @@ const file_agent_proto_rawDesc = "" +
 	"\fcancellation\x18\f \x01(\v2\x1a.agent.v1.TaskCancellationH\x00R\fcancellation\x12P\n" +
 	"\x14health_check_request\x18\r \x01(\v2\x1c.agent.v1.HealthCheckRequestH\x00R\x12healthCheckRequest\x12O\n" +
 	"\x13update_notification\x18\x0e \x01(\v2\x1c.agent.v1.UpdateNotificationH\x00R\x12updateNotification\x124\n" +
-	"\awelcome\x18\x0f \x01(\v2\x18.agent.v1.WelcomeMessageH\x00R\awelcomeB\t\n" +
+	"\awelcome\x18\x0f \x01(\v2\x18.agent.v1.WelcomeMessageH\x00R\awelcome\x12@\n" +
+	"\x0ereconcile_task\x18\x10 \x01(\v2\x17.agent.v1.ReconcileTaskH\x00R\rreconcileTaskB\t\n" +
 	"\apayload\"\xd6\x02\n" +
 	"\tCloudInfo\x123\n" +
 	"\bprovider\x18\x01 \x01(\x0e2\x17.agent.v1.CloudProviderR\bprovider\x12\x16\n" +
@@ -6933,7 +8690,201 @@ const file_agent_proto_rawDesc = "" +
 	"newVersion\x12!\n" +
 	"\fdownload_url\x18\x03 \x01(\tR\vdownloadUrl\x12\x1a\n" +
 	"\bchecksum\x18\x04 \x01(\tR\bchecksum\x12\x1a\n" +
-	"\bcritical\x18\x05 \x01(\bR\bcritical*g\n" +
+	"\bcritical\x18\x05 \x01(\bR\bcritical\"\xa5\x01\n" +
+	"\rReconcileTask\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x129\n" +
+	"\adesired\x18\x02 \x01(\v2\x1f.agent.v1.DesiredInfrastructureR\adesired\x12\x17\n" +
+	"\adry_run\x18\x03 \x01(\bR\x06dryRun\x12'\n" +
+	"\x0ftimeout_seconds\x18\x04 \x01(\x05R\x0etimeoutSeconds\"\x90\x03\n" +
+	"\x0fReconcileResult\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x17\n" +
+	"\adry_run\x18\x03 \x01(\bR\x06dryRun\x12;\n" +
+	"\x0fplanned_changes\x18\x04 \x03(\v2\x12.agent.v1.DiffItemR\x0eplannedChanges\x12;\n" +
+	"\x0fapplied_changes\x18\x05 \x03(\v2\x12.agent.v1.DiffItemR\x0eappliedChanges\x12\x12\n" +
+	"\x04logs\x18\x06 \x03(\tR\x04logs\x12)\n" +
+	"\x05error\x18\a \x01(\v2\x13.agent.v1.ErrorInfoR\x05error\x129\n" +
+	"\n" +
+	"started_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12=\n" +
+	"\fcompleted_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\"\x9c\x03\n" +
+	"\x15DesiredInfrastructure\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\x03R\aversion\x12%\n" +
+	"\x0eapplication_id\x18\x02 \x01(\tR\rapplicationId\x12 \n" +
+	"\venvironment\x18\x03 \x01(\tR\venvironment\x12\x1b\n" +
+	"\ttarget_id\x18\x04 \x01(\tR\btargetId\x121\n" +
+	"\bservices\x18\n" +
+	" \x03(\v2\x15.agent.v1.ServiceSpecR\bservices\x124\n" +
+	"\tdatabases\x18\v \x03(\v2\x16.agent.v1.DatabaseSpecR\tdatabases\x12+\n" +
+	"\x06queues\x18\f \x03(\v2\x13.agent.v1.QueueSpecR\x06queues\x121\n" +
+	"\bstorages\x18\r \x03(\v2\x15.agent.v1.StorageSpecR\bstorages\x12:\n" +
+	"\vconnections\x18\x14 \x03(\v2\x18.agent.v1.ConnectionSpecR\vconnections\"\x84\x05\n" +
+	"\vServiceSpec\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05image\x18\x03 \x01(\tR\x05image\x12\x1a\n" +
+	"\breplicas\x18\x04 \x01(\x05R\breplicas\x120\n" +
+	"\x03env\x18\x05 \x03(\v2\x1e.agent.v1.ServiceSpec.EnvEntryR\x03env\x12+\n" +
+	"\x05ports\x18\x06 \x03(\v2\x15.agent.v1.PortMappingR\x05ports\x12A\n" +
+	"\x0fresource_limits\x18\a \x01(\v2\x18.agent.v1.ResourceLimitsR\x0eresourceLimits\x12\x18\n" +
+	"\anetwork\x18\b \x01(\tR\anetwork\x12\x1d\n" +
+	"\n" +
+	"depends_on\x18\t \x03(\tR\tdependsOn\x12>\n" +
+	"\fhealth_check\x18\n" +
+	" \x01(\v2\x1b.agent.v1.HealthCheckConfigR\vhealthCheck\x129\n" +
+	"\x06labels\x18\v \x03(\v2!.agent.v1.ServiceSpec.LabelsEntryR\x06labels\x12/\n" +
+	"\avolumes\x18\f \x03(\v2\x15.agent.v1.VolumeMountR\avolumes\x12%\n" +
+	"\x0erestart_policy\x18\r \x01(\tR\rrestartPolicy\x1a6\n" +
+	"\bEnvEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa8\x01\n" +
+	"\x0eResourceLimits\x12\x1b\n" +
+	"\tcpu_limit\x18\x01 \x01(\tR\bcpuLimit\x12!\n" +
+	"\fmemory_limit\x18\x02 \x01(\tR\vmemoryLimit\x12'\n" +
+	"\x0fcpu_reservation\x18\x03 \x01(\tR\x0ecpuReservation\x12-\n" +
+	"\x12memory_reservation\x18\x04 \x01(\tR\x11memoryReservation\"\xed\x03\n" +
+	"\fDatabaseSpec\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
+	"\x06engine\x18\x03 \x01(\tR\x06engine\x12\x18\n" +
+	"\aversion\x18\x04 \x01(\tR\aversion\x12\x14\n" +
+	"\x05image\x18\x05 \x01(\tR\x05image\x121\n" +
+	"\x03env\x18\x06 \x03(\v2\x1f.agent.v1.DatabaseSpec.EnvEntryR\x03env\x12+\n" +
+	"\x05ports\x18\a \x03(\v2\x15.agent.v1.PortMappingR\x05ports\x12A\n" +
+	"\x0fresource_limits\x18\b \x01(\v2\x18.agent.v1.ResourceLimitsR\x0eresourceLimits\x12\x1f\n" +
+	"\vdata_volume\x18\t \x01(\tR\n" +
+	"dataVolume\x12:\n" +
+	"\x06config\x18\n" +
+	" \x03(\v2\".agent.v1.DatabaseSpec.ConfigEntryR\x06config\x1a6\n" +
+	"\bEnvEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
+	"\vConfigEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe4\x03\n" +
+	"\tQueueSpec\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
+	"\x06engine\x18\x03 \x01(\tR\x06engine\x12\x18\n" +
+	"\aversion\x18\x04 \x01(\tR\aversion\x12\x14\n" +
+	"\x05image\x18\x05 \x01(\tR\x05image\x12.\n" +
+	"\x03env\x18\x06 \x03(\v2\x1c.agent.v1.QueueSpec.EnvEntryR\x03env\x12+\n" +
+	"\x05ports\x18\a \x03(\v2\x15.agent.v1.PortMappingR\x05ports\x12A\n" +
+	"\x0fresource_limits\x18\b \x01(\v2\x18.agent.v1.ResourceLimitsR\x0eresourceLimits\x12\x1f\n" +
+	"\vdata_volume\x18\t \x01(\tR\n" +
+	"dataVolume\x127\n" +
+	"\x06config\x18\n" +
+	" \x03(\v2\x1f.agent.v1.QueueSpec.ConfigEntryR\x06config\x1a6\n" +
+	"\bEnvEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
+	"\vConfigEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xde\x02\n" +
+	"\vStorageSpec\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\bprovider\x18\x03 \x01(\tR\bprovider\x12\x14\n" +
+	"\x05image\x18\x04 \x01(\tR\x05image\x120\n" +
+	"\x03env\x18\x05 \x03(\v2\x1e.agent.v1.StorageSpec.EnvEntryR\x03env\x12+\n" +
+	"\x05ports\x18\x06 \x03(\v2\x15.agent.v1.PortMappingR\x05ports\x12A\n" +
+	"\x0fresource_limits\x18\a \x01(\v2\x18.agent.v1.ResourceLimitsR\x0eresourceLimits\x12\x1f\n" +
+	"\vdata_volume\x18\b \x01(\tR\n" +
+	"dataVolume\x1a6\n" +
+	"\bEnvEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xfc\x01\n" +
+	"\x0eConnectionSpec\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x1b\n" +
+	"\ttarget_id\x18\x03 \x01(\tR\btargetId\x12'\n" +
+	"\x0fconnection_type\x18\x04 \x01(\tR\x0econnectionType\x12<\n" +
+	"\x06config\x18\x05 \x03(\v2$.agent.v1.ConnectionSpec.ConfigEntryR\x06config\x1a9\n" +
+	"\vConfigEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc3\x02\n" +
+	"\x14ActualInfrastructure\x12\x1b\n" +
+	"\ttarget_id\x18\x01 \x01(\tR\btargetId\x12=\n" +
+	"\fcollected_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\vcollectedAt\x123\n" +
+	"\bservices\x18\n" +
+	" \x03(\v2\x17.agent.v1.ServiceStatusR\bservices\x126\n" +
+	"\tdatabases\x18\v \x03(\v2\x18.agent.v1.DatabaseStatusR\tdatabases\x12-\n" +
+	"\x06queues\x18\f \x03(\v2\x15.agent.v1.QueueStatusR\x06queues\x123\n" +
+	"\bstorages\x18\r \x03(\v2\x17.agent.v1.StorageStatusR\bstorages\"\xda\x04\n" +
+	"\rServiceStatus\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fcontainer_id\x18\x02 \x01(\tR\vcontainerId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n" +
+	"\x05image\x18\x04 \x01(\tR\x05image\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12%\n" +
+	"\x0eready_replicas\x18\x06 \x01(\x05R\rreadyReplicas\x12)\n" +
+	"\x10desired_replicas\x18\a \x01(\x05R\x0fdesiredReplicas\x12+\n" +
+	"\x05ports\x18\b \x03(\v2\x15.agent.v1.PortMappingR\x05ports\x12>\n" +
+	"\x0eresource_usage\x18\t \x01(\v2\x17.agent.v1.ResourceUsageR\rresourceUsage\x129\n" +
+	"\n" +
+	"started_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12=\n" +
+	"\flast_updated\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\vlastUpdated\x12#\n" +
+	"\rhealth_status\x18\f \x01(\tR\fhealthStatus\x12;\n" +
+	"\x06labels\x18\r \x03(\v2#.agent.v1.ServiceStatus.LabelsEntryR\x06labels\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa7\x02\n" +
+	"\rResourceUsage\x12\x1f\n" +
+	"\vcpu_percent\x18\x01 \x01(\x01R\n" +
+	"cpuPercent\x12!\n" +
+	"\fmemory_bytes\x18\x02 \x01(\x03R\vmemoryBytes\x12,\n" +
+	"\x12memory_limit_bytes\x18\x03 \x01(\x03R\x10memoryLimitBytes\x12(\n" +
+	"\x10network_rx_bytes\x18\x04 \x01(\x03R\x0enetworkRxBytes\x12(\n" +
+	"\x10network_tx_bytes\x18\x05 \x01(\x03R\x0enetworkTxBytes\x12&\n" +
+	"\x0fdisk_read_bytes\x18\x06 \x01(\x03R\rdiskReadBytes\x12(\n" +
+	"\x10disk_write_bytes\x18\a \x01(\x03R\x0ediskWriteBytes\"\xc5\x02\n" +
+	"\x0eDatabaseStatus\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fcontainer_id\x18\x02 \x01(\tR\vcontainerId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x16\n" +
+	"\x06engine\x18\x04 \x01(\tR\x06engine\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\tR\aversion\x12\x16\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\x128\n" +
+	"\x18is_accepting_connections\x18\a \x01(\bR\x16isAcceptingConnections\x12-\n" +
+	"\x12active_connections\x18\b \x01(\x05R\x11activeConnections\x129\n" +
+	"\n" +
+	"started_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\"\x8b\x02\n" +
+	"\vQueueStatus\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fcontainer_id\x18\x02 \x01(\tR\vcontainerId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x16\n" +
+	"\x06engine\x18\x04 \x01(\tR\x06engine\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12#\n" +
+	"\rmessage_count\x18\x06 \x01(\x03R\fmessageCount\x12%\n" +
+	"\x0econsumer_count\x18\a \x01(\x05R\rconsumerCount\x129\n" +
+	"\n" +
+	"started_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\"\x85\x02\n" +
+	"\rStorageStatus\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fcontainer_id\x18\x02 \x01(\tR\vcontainerId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1a\n" +
+	"\bprovider\x18\x04 \x01(\tR\bprovider\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x1d\n" +
+	"\n" +
+	"used_bytes\x18\x06 \x01(\x03R\tusedBytes\x12\x1f\n" +
+	"\vtotal_bytes\x18\a \x01(\x03R\n" +
+	"totalBytes\x129\n" +
+	"\n" +
+	"started_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\"\xdc\x02\n" +
+	"\bDiffItem\x12,\n" +
+	"\x06action\x18\x01 \x01(\x0e2\x14.agent.v1.DiffActionR\x06action\x12#\n" +
+	"\rresource_type\x18\x02 \x01(\tR\fresourceType\x12\x1f\n" +
+	"\vresource_id\x18\x03 \x01(\tR\n" +
+	"resourceId\x12#\n" +
+	"\rresource_name\x18\x04 \x01(\tR\fresourceName\x12/\n" +
+	"\x06before\x18\x05 \x01(\v2\x17.google.protobuf.StructR\x06before\x12-\n" +
+	"\x05after\x18\x06 \x01(\v2\x17.google.protobuf.StructR\x05after\x12\x18\n" +
+	"\achanges\x18\a \x03(\tR\achanges\x12\x18\n" +
+	"\aapplied\x18\b \x01(\bR\aapplied\x12#\n" +
+	"\rerror_message\x18\t \x01(\tR\ferrorMessage*g\n" +
 	"\bPlatform\x12\x18\n" +
 	"\x14PLATFORM_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13PLATFORM_KUBERNETES\x10\x01\x12\x12\n" +
@@ -7040,7 +8991,14 @@ const file_agent_proto_rawDesc = "" +
 	"\x15HEALTH_STATUS_HEALTHY\x10\x01\x12\x1a\n" +
 	"\x16HEALTH_STATUS_DEGRADED\x10\x02\x12\x1b\n" +
 	"\x17HEALTH_STATUS_UNHEALTHY\x10\x03\x12\x19\n" +
-	"\x15HEALTH_STATUS_UNKNOWN\x10\x042\x9a\x01\n" +
+	"\x15HEALTH_STATUS_UNKNOWN\x10\x04*\x8c\x01\n" +
+	"\n" +
+	"DiffAction\x12\x1b\n" +
+	"\x17DIFF_ACTION_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12DIFF_ACTION_CREATE\x10\x01\x12\x16\n" +
+	"\x12DIFF_ACTION_UPDATE\x10\x02\x12\x16\n" +
+	"\x12DIFF_ACTION_DELETE\x10\x03\x12\x19\n" +
+	"\x15DIFF_ACTION_UNCHANGED\x10\x042\x9a\x01\n" +
 	"\fAgentService\x12D\n" +
 	"\fAgentChannel\x12\x16.agent.v1.AgentMessage\x1a\x18.agent.v1.BackendMessage(\x010\x01\x12D\n" +
 	"\tHeartbeat\x12\x1a.agent.v1.HeartbeatRequest\x1a\x1b.agent.v1.HeartbeatResponseB\x12Z\x10agent/v1;agentv1b\x06proto3"
@@ -7057,8 +9015,8 @@ func file_agent_proto_rawDescGZIP() []byte {
 	return file_agent_proto_rawDescData
 }
 
-var file_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 16)
-var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 80)
+var file_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 17)
+var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 105)
 var file_agent_proto_goTypes = []any{
 	(Platform)(0),                  // 0: agent.v1.Platform
 	(CloudProvider)(0),             // 1: agent.v1.CloudProvider
@@ -7076,215 +9034,289 @@ var file_agent_proto_goTypes = []any{
 	(TaskStatus)(0),                // 13: agent.v1.TaskStatus
 	(ErrorCategory)(0),             // 14: agent.v1.ErrorCategory
 	(HealthStatus)(0),              // 15: agent.v1.HealthStatus
-	(*AgentMessage)(nil),           // 16: agent.v1.AgentMessage
-	(*BackendMessage)(nil),         // 17: agent.v1.BackendMessage
-	(*CloudInfo)(nil),              // 18: agent.v1.CloudInfo
-	(*Task)(nil),                   // 19: agent.v1.Task
-	(*KubernetesTask)(nil),         // 20: agent.v1.KubernetesTask
-	(*K8SDeployTask)(nil),          // 21: agent.v1.K8sDeployTask
-	(*KubernetesManifest)(nil),     // 22: agent.v1.KubernetesManifest
-	(*K8SScaleTask)(nil),           // 23: agent.v1.K8sScaleTask
-	(*K8SRollbackTask)(nil),        // 24: agent.v1.K8sRollbackTask
-	(*K8SDeleteTask)(nil),          // 25: agent.v1.K8sDeleteTask
-	(*K8SRestartTask)(nil),         // 26: agent.v1.K8sRestartTask
-	(*LinuxTask)(nil),              // 27: agent.v1.LinuxTask
-	(*LinuxDeployTask)(nil),        // 28: agent.v1.LinuxDeployTask
-	(*LinuxScaleTask)(nil),         // 29: agent.v1.LinuxScaleTask
-	(*LinuxRestartTask)(nil),       // 30: agent.v1.LinuxRestartTask
-	(*LinuxDeleteTask)(nil),        // 31: agent.v1.LinuxDeleteTask
-	(*SystemdConfig)(nil),          // 32: agent.v1.SystemdConfig
-	(*WindowsTask)(nil),            // 33: agent.v1.WindowsTask
-	(*WindowsDeployTask)(nil),      // 34: agent.v1.WindowsDeployTask
-	(*WindowsDesiredState)(nil),    // 35: agent.v1.WindowsDesiredState
-	(*IISSiteConfig)(nil),          // 36: agent.v1.IISSiteConfig
-	(*IISAdvancedSettings)(nil),    // 37: agent.v1.IISAdvancedSettings
-	(*AuthenticationSettings)(nil), // 38: agent.v1.AuthenticationSettings
-	(*SSLSettings)(nil),            // 39: agent.v1.SSLSettings
-	(*PerformanceSettings)(nil),    // 40: agent.v1.PerformanceSettings
-	(*ConfigFile)(nil),             // 41: agent.v1.ConfigFile
-	(*ArtifactSource)(nil),         // 42: agent.v1.ArtifactSource
-	(*WindowsServiceConfig)(nil),   // 43: agent.v1.WindowsServiceConfig
-	(*RecoveryAction)(nil),         // 44: agent.v1.RecoveryAction
-	(*IISConfig)(nil),              // 45: agent.v1.IISConfig
-	(*IISBinding)(nil),             // 46: agent.v1.IISBinding
-	(*AppPoolConfig)(nil),          // 47: agent.v1.AppPoolConfig
-	(*WindowsRegistryValue)(nil),   // 48: agent.v1.WindowsRegistryValue
-	(*WindowsRestartTask)(nil),     // 49: agent.v1.WindowsRestartTask
-	(*WindowsDeleteTask)(nil),      // 50: agent.v1.WindowsDeleteTask
-	(*Resources)(nil),              // 51: agent.v1.Resources
-	(*PortMapping)(nil),            // 52: agent.v1.PortMapping
-	(*VolumeMount)(nil),            // 53: agent.v1.VolumeMount
-	(*HealthCheckConfig)(nil),      // 54: agent.v1.HealthCheckConfig
-	(*DeploymentStrategy)(nil),     // 55: agent.v1.DeploymentStrategy
-	(*TaskAck)(nil),                // 56: agent.v1.TaskAck
-	(*TaskResult)(nil),             // 57: agent.v1.TaskResult
-	(*ErrorInfo)(nil),              // 58: agent.v1.ErrorInfo
-	(*TaskCancellation)(nil),       // 59: agent.v1.TaskCancellation
-	(*EventBatch)(nil),             // 60: agent.v1.EventBatch
-	(*K8SEventBatch)(nil),          // 61: agent.v1.K8sEventBatch
-	(*K8SEvent)(nil),               // 62: agent.v1.K8sEvent
-	(*LinuxEventBatch)(nil),        // 63: agent.v1.LinuxEventBatch
-	(*LinuxEvent)(nil),             // 64: agent.v1.LinuxEvent
-	(*WindowsEventBatch)(nil),      // 65: agent.v1.WindowsEventBatch
-	(*WindowsEvent)(nil),           // 66: agent.v1.WindowsEvent
-	(*AgentStatus)(nil),            // 67: agent.v1.AgentStatus
-	(*AgentMetrics)(nil),           // 68: agent.v1.AgentMetrics
-	(*ExecutorStatus)(nil),         // 69: agent.v1.ExecutorStatus
-	(*PlatformCapabilities)(nil),   // 70: agent.v1.PlatformCapabilities
-	(*CapabilityInfo)(nil),         // 71: agent.v1.CapabilityInfo
-	(*HeartbeatRequest)(nil),       // 72: agent.v1.HeartbeatRequest
-	(*K8SClusterInfo)(nil),         // 73: agent.v1.K8sClusterInfo
-	(*LinuxNodeInfo)(nil),          // 74: agent.v1.LinuxNodeInfo
-	(*WindowsNodeInfo)(nil),        // 75: agent.v1.WindowsNodeInfo
-	(*ClusterHealth)(nil),          // 76: agent.v1.ClusterHealth
-	(*NodeHealth)(nil),             // 77: agent.v1.NodeHealth
-	(*HeartbeatResponse)(nil),      // 78: agent.v1.HeartbeatResponse
-	(*HealthCheckRequest)(nil),     // 79: agent.v1.HealthCheckRequest
-	(*ConfigUpdate)(nil),           // 80: agent.v1.ConfigUpdate
-	(*UpdateNotification)(nil),     // 81: agent.v1.UpdateNotification
-	(*WelcomeMessage)(nil),         // 82: agent.v1.WelcomeMessage
-	(*UpdateInfo)(nil),             // 83: agent.v1.UpdateInfo
-	nil,                            // 84: agent.v1.CloudInfo.MetadataEntry
-	nil,                            // 85: agent.v1.Task.MetadataEntry
-	nil,                            // 86: agent.v1.KubernetesManifest.LabelsEntry
-	nil,                            // 87: agent.v1.LinuxDeployTask.EnvEntry
-	nil,                            // 88: agent.v1.SystemdConfig.EnvironmentEntry
-	nil,                            // 89: agent.v1.ErrorInfo.DetailsEntry
-	nil,                            // 90: agent.v1.AgentStatus.ExecutorsEntry
-	nil,                            // 91: agent.v1.ExecutorStatus.DetailsEntry
-	nil,                            // 92: agent.v1.PlatformCapabilities.FeaturesEntry
-	nil,                            // 93: agent.v1.CapabilityInfo.DetailsEntry
-	nil,                            // 94: agent.v1.ConfigUpdate.SettingsEntry
-	nil,                            // 95: agent.v1.WelcomeMessage.CapabilitiesEntry
-	(*timestamppb.Timestamp)(nil),  // 96: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),        // 97: google.protobuf.Struct
+	(DiffAction)(0),                // 16: agent.v1.DiffAction
+	(*AgentMessage)(nil),           // 17: agent.v1.AgentMessage
+	(*BackendMessage)(nil),         // 18: agent.v1.BackendMessage
+	(*CloudInfo)(nil),              // 19: agent.v1.CloudInfo
+	(*Task)(nil),                   // 20: agent.v1.Task
+	(*KubernetesTask)(nil),         // 21: agent.v1.KubernetesTask
+	(*K8SDeployTask)(nil),          // 22: agent.v1.K8sDeployTask
+	(*KubernetesManifest)(nil),     // 23: agent.v1.KubernetesManifest
+	(*K8SScaleTask)(nil),           // 24: agent.v1.K8sScaleTask
+	(*K8SRollbackTask)(nil),        // 25: agent.v1.K8sRollbackTask
+	(*K8SDeleteTask)(nil),          // 26: agent.v1.K8sDeleteTask
+	(*K8SRestartTask)(nil),         // 27: agent.v1.K8sRestartTask
+	(*LinuxTask)(nil),              // 28: agent.v1.LinuxTask
+	(*LinuxDeployTask)(nil),        // 29: agent.v1.LinuxDeployTask
+	(*LinuxScaleTask)(nil),         // 30: agent.v1.LinuxScaleTask
+	(*LinuxRestartTask)(nil),       // 31: agent.v1.LinuxRestartTask
+	(*LinuxDeleteTask)(nil),        // 32: agent.v1.LinuxDeleteTask
+	(*SystemdConfig)(nil),          // 33: agent.v1.SystemdConfig
+	(*WindowsTask)(nil),            // 34: agent.v1.WindowsTask
+	(*WindowsDeployTask)(nil),      // 35: agent.v1.WindowsDeployTask
+	(*WindowsDesiredState)(nil),    // 36: agent.v1.WindowsDesiredState
+	(*IISSiteConfig)(nil),          // 37: agent.v1.IISSiteConfig
+	(*IISAdvancedSettings)(nil),    // 38: agent.v1.IISAdvancedSettings
+	(*AuthenticationSettings)(nil), // 39: agent.v1.AuthenticationSettings
+	(*SSLSettings)(nil),            // 40: agent.v1.SSLSettings
+	(*PerformanceSettings)(nil),    // 41: agent.v1.PerformanceSettings
+	(*ConfigFile)(nil),             // 42: agent.v1.ConfigFile
+	(*ArtifactSource)(nil),         // 43: agent.v1.ArtifactSource
+	(*WindowsServiceConfig)(nil),   // 44: agent.v1.WindowsServiceConfig
+	(*RecoveryAction)(nil),         // 45: agent.v1.RecoveryAction
+	(*IISConfig)(nil),              // 46: agent.v1.IISConfig
+	(*IISBinding)(nil),             // 47: agent.v1.IISBinding
+	(*AppPoolConfig)(nil),          // 48: agent.v1.AppPoolConfig
+	(*WindowsRegistryValue)(nil),   // 49: agent.v1.WindowsRegistryValue
+	(*WindowsRestartTask)(nil),     // 50: agent.v1.WindowsRestartTask
+	(*WindowsDeleteTask)(nil),      // 51: agent.v1.WindowsDeleteTask
+	(*Resources)(nil),              // 52: agent.v1.Resources
+	(*PortMapping)(nil),            // 53: agent.v1.PortMapping
+	(*VolumeMount)(nil),            // 54: agent.v1.VolumeMount
+	(*HealthCheckConfig)(nil),      // 55: agent.v1.HealthCheckConfig
+	(*DeploymentStrategy)(nil),     // 56: agent.v1.DeploymentStrategy
+	(*TaskAck)(nil),                // 57: agent.v1.TaskAck
+	(*TaskResult)(nil),             // 58: agent.v1.TaskResult
+	(*ErrorInfo)(nil),              // 59: agent.v1.ErrorInfo
+	(*TaskCancellation)(nil),       // 60: agent.v1.TaskCancellation
+	(*EventBatch)(nil),             // 61: agent.v1.EventBatch
+	(*K8SEventBatch)(nil),          // 62: agent.v1.K8sEventBatch
+	(*K8SEvent)(nil),               // 63: agent.v1.K8sEvent
+	(*LinuxEventBatch)(nil),        // 64: agent.v1.LinuxEventBatch
+	(*LinuxEvent)(nil),             // 65: agent.v1.LinuxEvent
+	(*WindowsEventBatch)(nil),      // 66: agent.v1.WindowsEventBatch
+	(*WindowsEvent)(nil),           // 67: agent.v1.WindowsEvent
+	(*AgentStatus)(nil),            // 68: agent.v1.AgentStatus
+	(*AgentMetrics)(nil),           // 69: agent.v1.AgentMetrics
+	(*ExecutorStatus)(nil),         // 70: agent.v1.ExecutorStatus
+	(*PlatformCapabilities)(nil),   // 71: agent.v1.PlatformCapabilities
+	(*CapabilityInfo)(nil),         // 72: agent.v1.CapabilityInfo
+	(*HeartbeatRequest)(nil),       // 73: agent.v1.HeartbeatRequest
+	(*K8SClusterInfo)(nil),         // 74: agent.v1.K8sClusterInfo
+	(*LinuxNodeInfo)(nil),          // 75: agent.v1.LinuxNodeInfo
+	(*WindowsNodeInfo)(nil),        // 76: agent.v1.WindowsNodeInfo
+	(*ClusterHealth)(nil),          // 77: agent.v1.ClusterHealth
+	(*NodeHealth)(nil),             // 78: agent.v1.NodeHealth
+	(*HeartbeatResponse)(nil),      // 79: agent.v1.HeartbeatResponse
+	(*HealthCheckRequest)(nil),     // 80: agent.v1.HealthCheckRequest
+	(*ConfigUpdate)(nil),           // 81: agent.v1.ConfigUpdate
+	(*UpdateNotification)(nil),     // 82: agent.v1.UpdateNotification
+	(*WelcomeMessage)(nil),         // 83: agent.v1.WelcomeMessage
+	(*UpdateInfo)(nil),             // 84: agent.v1.UpdateInfo
+	(*ReconcileTask)(nil),          // 85: agent.v1.ReconcileTask
+	(*ReconcileResult)(nil),        // 86: agent.v1.ReconcileResult
+	(*DesiredInfrastructure)(nil),  // 87: agent.v1.DesiredInfrastructure
+	(*ServiceSpec)(nil),            // 88: agent.v1.ServiceSpec
+	(*ResourceLimits)(nil),         // 89: agent.v1.ResourceLimits
+	(*DatabaseSpec)(nil),           // 90: agent.v1.DatabaseSpec
+	(*QueueSpec)(nil),              // 91: agent.v1.QueueSpec
+	(*StorageSpec)(nil),            // 92: agent.v1.StorageSpec
+	(*ConnectionSpec)(nil),         // 93: agent.v1.ConnectionSpec
+	(*ActualInfrastructure)(nil),   // 94: agent.v1.ActualInfrastructure
+	(*ServiceStatus)(nil),          // 95: agent.v1.ServiceStatus
+	(*ResourceUsage)(nil),          // 96: agent.v1.ResourceUsage
+	(*DatabaseStatus)(nil),         // 97: agent.v1.DatabaseStatus
+	(*QueueStatus)(nil),            // 98: agent.v1.QueueStatus
+	(*StorageStatus)(nil),          // 99: agent.v1.StorageStatus
+	(*DiffItem)(nil),               // 100: agent.v1.DiffItem
+	nil,                            // 101: agent.v1.CloudInfo.MetadataEntry
+	nil,                            // 102: agent.v1.Task.MetadataEntry
+	nil,                            // 103: agent.v1.KubernetesManifest.LabelsEntry
+	nil,                            // 104: agent.v1.LinuxDeployTask.EnvEntry
+	nil,                            // 105: agent.v1.SystemdConfig.EnvironmentEntry
+	nil,                            // 106: agent.v1.ErrorInfo.DetailsEntry
+	nil,                            // 107: agent.v1.AgentStatus.ExecutorsEntry
+	nil,                            // 108: agent.v1.ExecutorStatus.DetailsEntry
+	nil,                            // 109: agent.v1.PlatformCapabilities.FeaturesEntry
+	nil,                            // 110: agent.v1.CapabilityInfo.DetailsEntry
+	nil,                            // 111: agent.v1.ConfigUpdate.SettingsEntry
+	nil,                            // 112: agent.v1.WelcomeMessage.CapabilitiesEntry
+	nil,                            // 113: agent.v1.ServiceSpec.EnvEntry
+	nil,                            // 114: agent.v1.ServiceSpec.LabelsEntry
+	nil,                            // 115: agent.v1.DatabaseSpec.EnvEntry
+	nil,                            // 116: agent.v1.DatabaseSpec.ConfigEntry
+	nil,                            // 117: agent.v1.QueueSpec.EnvEntry
+	nil,                            // 118: agent.v1.QueueSpec.ConfigEntry
+	nil,                            // 119: agent.v1.StorageSpec.EnvEntry
+	nil,                            // 120: agent.v1.ConnectionSpec.ConfigEntry
+	nil,                            // 121: agent.v1.ServiceStatus.LabelsEntry
+	(*timestamppb.Timestamp)(nil),  // 122: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),        // 123: google.protobuf.Struct
 }
 var file_agent_proto_depIdxs = []int32{
 	0,   // 0: agent.v1.AgentMessage.platform:type_name -> agent.v1.Platform
-	96,  // 1: agent.v1.AgentMessage.sent_at:type_name -> google.protobuf.Timestamp
-	56,  // 2: agent.v1.AgentMessage.task_ack:type_name -> agent.v1.TaskAck
-	57,  // 3: agent.v1.AgentMessage.task_result:type_name -> agent.v1.TaskResult
-	60,  // 4: agent.v1.AgentMessage.event_batch:type_name -> agent.v1.EventBatch
-	67,  // 5: agent.v1.AgentMessage.status:type_name -> agent.v1.AgentStatus
-	96,  // 6: agent.v1.BackendMessage.sent_at:type_name -> google.protobuf.Timestamp
-	19,  // 7: agent.v1.BackendMessage.task:type_name -> agent.v1.Task
-	80,  // 8: agent.v1.BackendMessage.config_update:type_name -> agent.v1.ConfigUpdate
-	59,  // 9: agent.v1.BackendMessage.cancellation:type_name -> agent.v1.TaskCancellation
-	79,  // 10: agent.v1.BackendMessage.health_check_request:type_name -> agent.v1.HealthCheckRequest
-	81,  // 11: agent.v1.BackendMessage.update_notification:type_name -> agent.v1.UpdateNotification
-	82,  // 12: agent.v1.BackendMessage.welcome:type_name -> agent.v1.WelcomeMessage
-	1,   // 13: agent.v1.CloudInfo.provider:type_name -> agent.v1.CloudProvider
-	2,   // 14: agent.v1.CloudInfo.detection_method:type_name -> agent.v1.CloudDetectionMethod
-	84,  // 15: agent.v1.CloudInfo.metadata:type_name -> agent.v1.CloudInfo.MetadataEntry
-	3,   // 16: agent.v1.Task.type:type_name -> agent.v1.TaskType
-	0,   // 17: agent.v1.Task.platform:type_name -> agent.v1.Platform
-	4,   // 18: agent.v1.Task.priority:type_name -> agent.v1.Priority
-	96,  // 19: agent.v1.Task.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 20: agent.v1.Task.expires_at:type_name -> google.protobuf.Timestamp
-	85,  // 21: agent.v1.Task.metadata:type_name -> agent.v1.Task.MetadataEntry
-	20,  // 22: agent.v1.Task.kubernetes:type_name -> agent.v1.KubernetesTask
-	27,  // 23: agent.v1.Task.linux:type_name -> agent.v1.LinuxTask
-	33,  // 24: agent.v1.Task.windows:type_name -> agent.v1.WindowsTask
-	21,  // 25: agent.v1.KubernetesTask.deploy:type_name -> agent.v1.K8sDeployTask
-	23,  // 26: agent.v1.KubernetesTask.scale:type_name -> agent.v1.K8sScaleTask
-	24,  // 27: agent.v1.KubernetesTask.rollback:type_name -> agent.v1.K8sRollbackTask
-	25,  // 28: agent.v1.KubernetesTask.delete:type_name -> agent.v1.K8sDeleteTask
-	26,  // 29: agent.v1.KubernetesTask.restart:type_name -> agent.v1.K8sRestartTask
-	22,  // 30: agent.v1.K8sDeployTask.manifests:type_name -> agent.v1.KubernetesManifest
-	86,  // 31: agent.v1.KubernetesManifest.labels:type_name -> agent.v1.KubernetesManifest.LabelsEntry
-	28,  // 32: agent.v1.LinuxTask.deploy:type_name -> agent.v1.LinuxDeployTask
-	29,  // 33: agent.v1.LinuxTask.scale:type_name -> agent.v1.LinuxScaleTask
-	30,  // 34: agent.v1.LinuxTask.restart:type_name -> agent.v1.LinuxRestartTask
-	31,  // 35: agent.v1.LinuxTask.delete:type_name -> agent.v1.LinuxDeleteTask
-	6,   // 36: agent.v1.LinuxDeployTask.deployment_type:type_name -> agent.v1.LinuxDeploymentType
-	87,  // 37: agent.v1.LinuxDeployTask.env:type_name -> agent.v1.LinuxDeployTask.EnvEntry
-	52,  // 38: agent.v1.LinuxDeployTask.ports:type_name -> agent.v1.PortMapping
-	53,  // 39: agent.v1.LinuxDeployTask.volumes:type_name -> agent.v1.VolumeMount
-	51,  // 40: agent.v1.LinuxDeployTask.resources:type_name -> agent.v1.Resources
-	32,  // 41: agent.v1.LinuxDeployTask.systemd:type_name -> agent.v1.SystemdConfig
-	54,  // 42: agent.v1.LinuxDeployTask.health_check:type_name -> agent.v1.HealthCheckConfig
-	88,  // 43: agent.v1.SystemdConfig.environment:type_name -> agent.v1.SystemdConfig.EnvironmentEntry
-	34,  // 44: agent.v1.WindowsTask.deploy:type_name -> agent.v1.WindowsDeployTask
-	49,  // 45: agent.v1.WindowsTask.restart:type_name -> agent.v1.WindowsRestartTask
-	50,  // 46: agent.v1.WindowsTask.delete:type_name -> agent.v1.WindowsDeleteTask
-	9,   // 47: agent.v1.WindowsDeployTask.deployment_type:type_name -> agent.v1.WindowsDeploymentType
-	35,  // 48: agent.v1.WindowsDeployTask.desired_state:type_name -> agent.v1.WindowsDesiredState
-	42,  // 49: agent.v1.WindowsDeployTask.artifact:type_name -> agent.v1.ArtifactSource
-	36,  // 50: agent.v1.WindowsDesiredState.site:type_name -> agent.v1.IISSiteConfig
-	47,  // 51: agent.v1.WindowsDesiredState.app_pool:type_name -> agent.v1.AppPoolConfig
-	41,  // 52: agent.v1.WindowsDesiredState.configs:type_name -> agent.v1.ConfigFile
-	37,  // 53: agent.v1.WindowsDesiredState.iis_settings:type_name -> agent.v1.IISAdvancedSettings
-	46,  // 54: agent.v1.IISSiteConfig.bindings:type_name -> agent.v1.IISBinding
-	38,  // 55: agent.v1.IISAdvancedSettings.authentication:type_name -> agent.v1.AuthenticationSettings
-	39,  // 56: agent.v1.IISAdvancedSettings.ssl:type_name -> agent.v1.SSLSettings
-	40,  // 57: agent.v1.IISAdvancedSettings.performance:type_name -> agent.v1.PerformanceSettings
-	7,   // 58: agent.v1.ConfigFile.format:type_name -> agent.v1.ConfigFormat
-	8,   // 59: agent.v1.ArtifactSource.type:type_name -> agent.v1.ArtifactType
-	10,  // 60: agent.v1.WindowsServiceConfig.start_type:type_name -> agent.v1.ServiceStartType
-	44,  // 61: agent.v1.WindowsServiceConfig.recovery:type_name -> agent.v1.RecoveryAction
-	46,  // 62: agent.v1.IISConfig.bindings:type_name -> agent.v1.IISBinding
-	47,  // 63: agent.v1.IISConfig.app_pool:type_name -> agent.v1.AppPoolConfig
-	11,  // 64: agent.v1.HealthCheckConfig.type:type_name -> agent.v1.HealthCheckType
-	12,  // 65: agent.v1.DeploymentStrategy.type:type_name -> agent.v1.StrategyType
-	96,  // 66: agent.v1.TaskAck.received_at:type_name -> google.protobuf.Timestamp
-	13,  // 67: agent.v1.TaskResult.status:type_name -> agent.v1.TaskStatus
-	97,  // 68: agent.v1.TaskResult.result:type_name -> google.protobuf.Struct
-	58,  // 69: agent.v1.TaskResult.error:type_name -> agent.v1.ErrorInfo
-	96,  // 70: agent.v1.TaskResult.started_at:type_name -> google.protobuf.Timestamp
-	96,  // 71: agent.v1.TaskResult.completed_at:type_name -> google.protobuf.Timestamp
-	14,  // 72: agent.v1.ErrorInfo.category:type_name -> agent.v1.ErrorCategory
-	89,  // 73: agent.v1.ErrorInfo.details:type_name -> agent.v1.ErrorInfo.DetailsEntry
-	0,   // 74: agent.v1.EventBatch.platform:type_name -> agent.v1.Platform
-	61,  // 75: agent.v1.EventBatch.k8s_events:type_name -> agent.v1.K8sEventBatch
-	63,  // 76: agent.v1.EventBatch.linux_events:type_name -> agent.v1.LinuxEventBatch
-	65,  // 77: agent.v1.EventBatch.windows_events:type_name -> agent.v1.WindowsEventBatch
-	62,  // 78: agent.v1.K8sEventBatch.events:type_name -> agent.v1.K8sEvent
-	96,  // 79: agent.v1.K8sEvent.timestamp:type_name -> google.protobuf.Timestamp
-	97,  // 80: agent.v1.K8sEvent.metadata:type_name -> google.protobuf.Struct
-	64,  // 81: agent.v1.LinuxEventBatch.events:type_name -> agent.v1.LinuxEvent
-	96,  // 82: agent.v1.LinuxEvent.timestamp:type_name -> google.protobuf.Timestamp
-	97,  // 83: agent.v1.LinuxEvent.metadata:type_name -> google.protobuf.Struct
-	66,  // 84: agent.v1.WindowsEventBatch.events:type_name -> agent.v1.WindowsEvent
-	96,  // 85: agent.v1.WindowsEvent.timestamp:type_name -> google.protobuf.Timestamp
-	97,  // 86: agent.v1.WindowsEvent.metadata:type_name -> google.protobuf.Struct
-	0,   // 87: agent.v1.AgentStatus.platform:type_name -> agent.v1.Platform
-	15,  // 88: agent.v1.AgentStatus.health_status:type_name -> agent.v1.HealthStatus
-	68,  // 89: agent.v1.AgentStatus.metrics:type_name -> agent.v1.AgentMetrics
-	90,  // 90: agent.v1.AgentStatus.executors:type_name -> agent.v1.AgentStatus.ExecutorsEntry
-	70,  // 91: agent.v1.AgentStatus.capabilities:type_name -> agent.v1.PlatformCapabilities
-	18,  // 92: agent.v1.AgentStatus.cloud_info:type_name -> agent.v1.CloudInfo
-	96,  // 93: agent.v1.AgentMetrics.last_task_at:type_name -> google.protobuf.Timestamp
-	91,  // 94: agent.v1.ExecutorStatus.details:type_name -> agent.v1.ExecutorStatus.DetailsEntry
-	92,  // 95: agent.v1.PlatformCapabilities.features:type_name -> agent.v1.PlatformCapabilities.FeaturesEntry
-	93,  // 96: agent.v1.CapabilityInfo.details:type_name -> agent.v1.CapabilityInfo.DetailsEntry
-	0,   // 97: agent.v1.HeartbeatRequest.platform:type_name -> agent.v1.Platform
-	96,  // 98: agent.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
-	73,  // 99: agent.v1.HeartbeatRequest.k8s:type_name -> agent.v1.K8sClusterInfo
-	74,  // 100: agent.v1.HeartbeatRequest.linux:type_name -> agent.v1.LinuxNodeInfo
-	75,  // 101: agent.v1.HeartbeatRequest.windows:type_name -> agent.v1.WindowsNodeInfo
-	68,  // 102: agent.v1.HeartbeatRequest.metrics:type_name -> agent.v1.AgentMetrics
-	70,  // 103: agent.v1.HeartbeatRequest.capabilities:type_name -> agent.v1.PlatformCapabilities
-	18,  // 104: agent.v1.HeartbeatRequest.cloud_info:type_name -> agent.v1.CloudInfo
-	76,  // 105: agent.v1.K8sClusterInfo.health:type_name -> agent.v1.ClusterHealth
-	77,  // 106: agent.v1.LinuxNodeInfo.health:type_name -> agent.v1.NodeHealth
-	77,  // 107: agent.v1.WindowsNodeInfo.health:type_name -> agent.v1.NodeHealth
-	96,  // 108: agent.v1.HeartbeatResponse.server_time:type_name -> google.protobuf.Timestamp
-	83,  // 109: agent.v1.HeartbeatResponse.update_info:type_name -> agent.v1.UpdateInfo
-	94,  // 110: agent.v1.ConfigUpdate.settings:type_name -> agent.v1.ConfigUpdate.SettingsEntry
-	96,  // 111: agent.v1.ConfigUpdate.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 112: agent.v1.UpdateNotification.released_at:type_name -> google.protobuf.Timestamp
-	95,  // 113: agent.v1.WelcomeMessage.capabilities:type_name -> agent.v1.WelcomeMessage.CapabilitiesEntry
-	69,  // 114: agent.v1.AgentStatus.ExecutorsEntry.value:type_name -> agent.v1.ExecutorStatus
-	71,  // 115: agent.v1.PlatformCapabilities.FeaturesEntry.value:type_name -> agent.v1.CapabilityInfo
-	16,  // 116: agent.v1.AgentService.AgentChannel:input_type -> agent.v1.AgentMessage
-	72,  // 117: agent.v1.AgentService.Heartbeat:input_type -> agent.v1.HeartbeatRequest
-	17,  // 118: agent.v1.AgentService.AgentChannel:output_type -> agent.v1.BackendMessage
-	78,  // 119: agent.v1.AgentService.Heartbeat:output_type -> agent.v1.HeartbeatResponse
-	118, // [118:120] is the sub-list for method output_type
-	116, // [116:118] is the sub-list for method input_type
-	116, // [116:116] is the sub-list for extension type_name
-	116, // [116:116] is the sub-list for extension extendee
-	0,   // [0:116] is the sub-list for field type_name
+	122, // 1: agent.v1.AgentMessage.sent_at:type_name -> google.protobuf.Timestamp
+	57,  // 2: agent.v1.AgentMessage.task_ack:type_name -> agent.v1.TaskAck
+	58,  // 3: agent.v1.AgentMessage.task_result:type_name -> agent.v1.TaskResult
+	61,  // 4: agent.v1.AgentMessage.event_batch:type_name -> agent.v1.EventBatch
+	68,  // 5: agent.v1.AgentMessage.status:type_name -> agent.v1.AgentStatus
+	86,  // 6: agent.v1.AgentMessage.reconcile_result:type_name -> agent.v1.ReconcileResult
+	94,  // 7: agent.v1.AgentMessage.actual_infrastructure:type_name -> agent.v1.ActualInfrastructure
+	122, // 8: agent.v1.BackendMessage.sent_at:type_name -> google.protobuf.Timestamp
+	20,  // 9: agent.v1.BackendMessage.task:type_name -> agent.v1.Task
+	81,  // 10: agent.v1.BackendMessage.config_update:type_name -> agent.v1.ConfigUpdate
+	60,  // 11: agent.v1.BackendMessage.cancellation:type_name -> agent.v1.TaskCancellation
+	80,  // 12: agent.v1.BackendMessage.health_check_request:type_name -> agent.v1.HealthCheckRequest
+	82,  // 13: agent.v1.BackendMessage.update_notification:type_name -> agent.v1.UpdateNotification
+	83,  // 14: agent.v1.BackendMessage.welcome:type_name -> agent.v1.WelcomeMessage
+	85,  // 15: agent.v1.BackendMessage.reconcile_task:type_name -> agent.v1.ReconcileTask
+	1,   // 16: agent.v1.CloudInfo.provider:type_name -> agent.v1.CloudProvider
+	2,   // 17: agent.v1.CloudInfo.detection_method:type_name -> agent.v1.CloudDetectionMethod
+	101, // 18: agent.v1.CloudInfo.metadata:type_name -> agent.v1.CloudInfo.MetadataEntry
+	3,   // 19: agent.v1.Task.type:type_name -> agent.v1.TaskType
+	0,   // 20: agent.v1.Task.platform:type_name -> agent.v1.Platform
+	4,   // 21: agent.v1.Task.priority:type_name -> agent.v1.Priority
+	122, // 22: agent.v1.Task.created_at:type_name -> google.protobuf.Timestamp
+	122, // 23: agent.v1.Task.expires_at:type_name -> google.protobuf.Timestamp
+	102, // 24: agent.v1.Task.metadata:type_name -> agent.v1.Task.MetadataEntry
+	21,  // 25: agent.v1.Task.kubernetes:type_name -> agent.v1.KubernetesTask
+	28,  // 26: agent.v1.Task.linux:type_name -> agent.v1.LinuxTask
+	34,  // 27: agent.v1.Task.windows:type_name -> agent.v1.WindowsTask
+	22,  // 28: agent.v1.KubernetesTask.deploy:type_name -> agent.v1.K8sDeployTask
+	24,  // 29: agent.v1.KubernetesTask.scale:type_name -> agent.v1.K8sScaleTask
+	25,  // 30: agent.v1.KubernetesTask.rollback:type_name -> agent.v1.K8sRollbackTask
+	26,  // 31: agent.v1.KubernetesTask.delete:type_name -> agent.v1.K8sDeleteTask
+	27,  // 32: agent.v1.KubernetesTask.restart:type_name -> agent.v1.K8sRestartTask
+	23,  // 33: agent.v1.K8sDeployTask.manifests:type_name -> agent.v1.KubernetesManifest
+	103, // 34: agent.v1.KubernetesManifest.labels:type_name -> agent.v1.KubernetesManifest.LabelsEntry
+	29,  // 35: agent.v1.LinuxTask.deploy:type_name -> agent.v1.LinuxDeployTask
+	30,  // 36: agent.v1.LinuxTask.scale:type_name -> agent.v1.LinuxScaleTask
+	31,  // 37: agent.v1.LinuxTask.restart:type_name -> agent.v1.LinuxRestartTask
+	32,  // 38: agent.v1.LinuxTask.delete:type_name -> agent.v1.LinuxDeleteTask
+	6,   // 39: agent.v1.LinuxDeployTask.deployment_type:type_name -> agent.v1.LinuxDeploymentType
+	104, // 40: agent.v1.LinuxDeployTask.env:type_name -> agent.v1.LinuxDeployTask.EnvEntry
+	53,  // 41: agent.v1.LinuxDeployTask.ports:type_name -> agent.v1.PortMapping
+	54,  // 42: agent.v1.LinuxDeployTask.volumes:type_name -> agent.v1.VolumeMount
+	52,  // 43: agent.v1.LinuxDeployTask.resources:type_name -> agent.v1.Resources
+	33,  // 44: agent.v1.LinuxDeployTask.systemd:type_name -> agent.v1.SystemdConfig
+	55,  // 45: agent.v1.LinuxDeployTask.health_check:type_name -> agent.v1.HealthCheckConfig
+	105, // 46: agent.v1.SystemdConfig.environment:type_name -> agent.v1.SystemdConfig.EnvironmentEntry
+	35,  // 47: agent.v1.WindowsTask.deploy:type_name -> agent.v1.WindowsDeployTask
+	50,  // 48: agent.v1.WindowsTask.restart:type_name -> agent.v1.WindowsRestartTask
+	51,  // 49: agent.v1.WindowsTask.delete:type_name -> agent.v1.WindowsDeleteTask
+	9,   // 50: agent.v1.WindowsDeployTask.deployment_type:type_name -> agent.v1.WindowsDeploymentType
+	36,  // 51: agent.v1.WindowsDeployTask.desired_state:type_name -> agent.v1.WindowsDesiredState
+	43,  // 52: agent.v1.WindowsDeployTask.artifact:type_name -> agent.v1.ArtifactSource
+	37,  // 53: agent.v1.WindowsDesiredState.site:type_name -> agent.v1.IISSiteConfig
+	48,  // 54: agent.v1.WindowsDesiredState.app_pool:type_name -> agent.v1.AppPoolConfig
+	42,  // 55: agent.v1.WindowsDesiredState.configs:type_name -> agent.v1.ConfigFile
+	38,  // 56: agent.v1.WindowsDesiredState.iis_settings:type_name -> agent.v1.IISAdvancedSettings
+	47,  // 57: agent.v1.IISSiteConfig.bindings:type_name -> agent.v1.IISBinding
+	39,  // 58: agent.v1.IISAdvancedSettings.authentication:type_name -> agent.v1.AuthenticationSettings
+	40,  // 59: agent.v1.IISAdvancedSettings.ssl:type_name -> agent.v1.SSLSettings
+	41,  // 60: agent.v1.IISAdvancedSettings.performance:type_name -> agent.v1.PerformanceSettings
+	7,   // 61: agent.v1.ConfigFile.format:type_name -> agent.v1.ConfigFormat
+	8,   // 62: agent.v1.ArtifactSource.type:type_name -> agent.v1.ArtifactType
+	10,  // 63: agent.v1.WindowsServiceConfig.start_type:type_name -> agent.v1.ServiceStartType
+	45,  // 64: agent.v1.WindowsServiceConfig.recovery:type_name -> agent.v1.RecoveryAction
+	47,  // 65: agent.v1.IISConfig.bindings:type_name -> agent.v1.IISBinding
+	48,  // 66: agent.v1.IISConfig.app_pool:type_name -> agent.v1.AppPoolConfig
+	11,  // 67: agent.v1.HealthCheckConfig.type:type_name -> agent.v1.HealthCheckType
+	12,  // 68: agent.v1.DeploymentStrategy.type:type_name -> agent.v1.StrategyType
+	122, // 69: agent.v1.TaskAck.received_at:type_name -> google.protobuf.Timestamp
+	13,  // 70: agent.v1.TaskResult.status:type_name -> agent.v1.TaskStatus
+	123, // 71: agent.v1.TaskResult.result:type_name -> google.protobuf.Struct
+	59,  // 72: agent.v1.TaskResult.error:type_name -> agent.v1.ErrorInfo
+	122, // 73: agent.v1.TaskResult.started_at:type_name -> google.protobuf.Timestamp
+	122, // 74: agent.v1.TaskResult.completed_at:type_name -> google.protobuf.Timestamp
+	14,  // 75: agent.v1.ErrorInfo.category:type_name -> agent.v1.ErrorCategory
+	106, // 76: agent.v1.ErrorInfo.details:type_name -> agent.v1.ErrorInfo.DetailsEntry
+	0,   // 77: agent.v1.EventBatch.platform:type_name -> agent.v1.Platform
+	62,  // 78: agent.v1.EventBatch.k8s_events:type_name -> agent.v1.K8sEventBatch
+	64,  // 79: agent.v1.EventBatch.linux_events:type_name -> agent.v1.LinuxEventBatch
+	66,  // 80: agent.v1.EventBatch.windows_events:type_name -> agent.v1.WindowsEventBatch
+	63,  // 81: agent.v1.K8sEventBatch.events:type_name -> agent.v1.K8sEvent
+	122, // 82: agent.v1.K8sEvent.timestamp:type_name -> google.protobuf.Timestamp
+	123, // 83: agent.v1.K8sEvent.metadata:type_name -> google.protobuf.Struct
+	65,  // 84: agent.v1.LinuxEventBatch.events:type_name -> agent.v1.LinuxEvent
+	122, // 85: agent.v1.LinuxEvent.timestamp:type_name -> google.protobuf.Timestamp
+	123, // 86: agent.v1.LinuxEvent.metadata:type_name -> google.protobuf.Struct
+	67,  // 87: agent.v1.WindowsEventBatch.events:type_name -> agent.v1.WindowsEvent
+	122, // 88: agent.v1.WindowsEvent.timestamp:type_name -> google.protobuf.Timestamp
+	123, // 89: agent.v1.WindowsEvent.metadata:type_name -> google.protobuf.Struct
+	0,   // 90: agent.v1.AgentStatus.platform:type_name -> agent.v1.Platform
+	15,  // 91: agent.v1.AgentStatus.health_status:type_name -> agent.v1.HealthStatus
+	69,  // 92: agent.v1.AgentStatus.metrics:type_name -> agent.v1.AgentMetrics
+	107, // 93: agent.v1.AgentStatus.executors:type_name -> agent.v1.AgentStatus.ExecutorsEntry
+	71,  // 94: agent.v1.AgentStatus.capabilities:type_name -> agent.v1.PlatformCapabilities
+	19,  // 95: agent.v1.AgentStatus.cloud_info:type_name -> agent.v1.CloudInfo
+	122, // 96: agent.v1.AgentMetrics.last_task_at:type_name -> google.protobuf.Timestamp
+	108, // 97: agent.v1.ExecutorStatus.details:type_name -> agent.v1.ExecutorStatus.DetailsEntry
+	109, // 98: agent.v1.PlatformCapabilities.features:type_name -> agent.v1.PlatformCapabilities.FeaturesEntry
+	110, // 99: agent.v1.CapabilityInfo.details:type_name -> agent.v1.CapabilityInfo.DetailsEntry
+	0,   // 100: agent.v1.HeartbeatRequest.platform:type_name -> agent.v1.Platform
+	122, // 101: agent.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
+	74,  // 102: agent.v1.HeartbeatRequest.k8s:type_name -> agent.v1.K8sClusterInfo
+	75,  // 103: agent.v1.HeartbeatRequest.linux:type_name -> agent.v1.LinuxNodeInfo
+	76,  // 104: agent.v1.HeartbeatRequest.windows:type_name -> agent.v1.WindowsNodeInfo
+	69,  // 105: agent.v1.HeartbeatRequest.metrics:type_name -> agent.v1.AgentMetrics
+	71,  // 106: agent.v1.HeartbeatRequest.capabilities:type_name -> agent.v1.PlatformCapabilities
+	19,  // 107: agent.v1.HeartbeatRequest.cloud_info:type_name -> agent.v1.CloudInfo
+	77,  // 108: agent.v1.K8sClusterInfo.health:type_name -> agent.v1.ClusterHealth
+	78,  // 109: agent.v1.LinuxNodeInfo.health:type_name -> agent.v1.NodeHealth
+	78,  // 110: agent.v1.WindowsNodeInfo.health:type_name -> agent.v1.NodeHealth
+	122, // 111: agent.v1.HeartbeatResponse.server_time:type_name -> google.protobuf.Timestamp
+	84,  // 112: agent.v1.HeartbeatResponse.update_info:type_name -> agent.v1.UpdateInfo
+	111, // 113: agent.v1.ConfigUpdate.settings:type_name -> agent.v1.ConfigUpdate.SettingsEntry
+	122, // 114: agent.v1.ConfigUpdate.updated_at:type_name -> google.protobuf.Timestamp
+	122, // 115: agent.v1.UpdateNotification.released_at:type_name -> google.protobuf.Timestamp
+	112, // 116: agent.v1.WelcomeMessage.capabilities:type_name -> agent.v1.WelcomeMessage.CapabilitiesEntry
+	87,  // 117: agent.v1.ReconcileTask.desired:type_name -> agent.v1.DesiredInfrastructure
+	100, // 118: agent.v1.ReconcileResult.planned_changes:type_name -> agent.v1.DiffItem
+	100, // 119: agent.v1.ReconcileResult.applied_changes:type_name -> agent.v1.DiffItem
+	59,  // 120: agent.v1.ReconcileResult.error:type_name -> agent.v1.ErrorInfo
+	122, // 121: agent.v1.ReconcileResult.started_at:type_name -> google.protobuf.Timestamp
+	122, // 122: agent.v1.ReconcileResult.completed_at:type_name -> google.protobuf.Timestamp
+	88,  // 123: agent.v1.DesiredInfrastructure.services:type_name -> agent.v1.ServiceSpec
+	90,  // 124: agent.v1.DesiredInfrastructure.databases:type_name -> agent.v1.DatabaseSpec
+	91,  // 125: agent.v1.DesiredInfrastructure.queues:type_name -> agent.v1.QueueSpec
+	92,  // 126: agent.v1.DesiredInfrastructure.storages:type_name -> agent.v1.StorageSpec
+	93,  // 127: agent.v1.DesiredInfrastructure.connections:type_name -> agent.v1.ConnectionSpec
+	113, // 128: agent.v1.ServiceSpec.env:type_name -> agent.v1.ServiceSpec.EnvEntry
+	53,  // 129: agent.v1.ServiceSpec.ports:type_name -> agent.v1.PortMapping
+	89,  // 130: agent.v1.ServiceSpec.resource_limits:type_name -> agent.v1.ResourceLimits
+	55,  // 131: agent.v1.ServiceSpec.health_check:type_name -> agent.v1.HealthCheckConfig
+	114, // 132: agent.v1.ServiceSpec.labels:type_name -> agent.v1.ServiceSpec.LabelsEntry
+	54,  // 133: agent.v1.ServiceSpec.volumes:type_name -> agent.v1.VolumeMount
+	115, // 134: agent.v1.DatabaseSpec.env:type_name -> agent.v1.DatabaseSpec.EnvEntry
+	53,  // 135: agent.v1.DatabaseSpec.ports:type_name -> agent.v1.PortMapping
+	89,  // 136: agent.v1.DatabaseSpec.resource_limits:type_name -> agent.v1.ResourceLimits
+	116, // 137: agent.v1.DatabaseSpec.config:type_name -> agent.v1.DatabaseSpec.ConfigEntry
+	117, // 138: agent.v1.QueueSpec.env:type_name -> agent.v1.QueueSpec.EnvEntry
+	53,  // 139: agent.v1.QueueSpec.ports:type_name -> agent.v1.PortMapping
+	89,  // 140: agent.v1.QueueSpec.resource_limits:type_name -> agent.v1.ResourceLimits
+	118, // 141: agent.v1.QueueSpec.config:type_name -> agent.v1.QueueSpec.ConfigEntry
+	119, // 142: agent.v1.StorageSpec.env:type_name -> agent.v1.StorageSpec.EnvEntry
+	53,  // 143: agent.v1.StorageSpec.ports:type_name -> agent.v1.PortMapping
+	89,  // 144: agent.v1.StorageSpec.resource_limits:type_name -> agent.v1.ResourceLimits
+	120, // 145: agent.v1.ConnectionSpec.config:type_name -> agent.v1.ConnectionSpec.ConfigEntry
+	122, // 146: agent.v1.ActualInfrastructure.collected_at:type_name -> google.protobuf.Timestamp
+	95,  // 147: agent.v1.ActualInfrastructure.services:type_name -> agent.v1.ServiceStatus
+	97,  // 148: agent.v1.ActualInfrastructure.databases:type_name -> agent.v1.DatabaseStatus
+	98,  // 149: agent.v1.ActualInfrastructure.queues:type_name -> agent.v1.QueueStatus
+	99,  // 150: agent.v1.ActualInfrastructure.storages:type_name -> agent.v1.StorageStatus
+	53,  // 151: agent.v1.ServiceStatus.ports:type_name -> agent.v1.PortMapping
+	96,  // 152: agent.v1.ServiceStatus.resource_usage:type_name -> agent.v1.ResourceUsage
+	122, // 153: agent.v1.ServiceStatus.started_at:type_name -> google.protobuf.Timestamp
+	122, // 154: agent.v1.ServiceStatus.last_updated:type_name -> google.protobuf.Timestamp
+	121, // 155: agent.v1.ServiceStatus.labels:type_name -> agent.v1.ServiceStatus.LabelsEntry
+	122, // 156: agent.v1.DatabaseStatus.started_at:type_name -> google.protobuf.Timestamp
+	122, // 157: agent.v1.QueueStatus.started_at:type_name -> google.protobuf.Timestamp
+	122, // 158: agent.v1.StorageStatus.started_at:type_name -> google.protobuf.Timestamp
+	16,  // 159: agent.v1.DiffItem.action:type_name -> agent.v1.DiffAction
+	123, // 160: agent.v1.DiffItem.before:type_name -> google.protobuf.Struct
+	123, // 161: agent.v1.DiffItem.after:type_name -> google.protobuf.Struct
+	70,  // 162: agent.v1.AgentStatus.ExecutorsEntry.value:type_name -> agent.v1.ExecutorStatus
+	72,  // 163: agent.v1.PlatformCapabilities.FeaturesEntry.value:type_name -> agent.v1.CapabilityInfo
+	17,  // 164: agent.v1.AgentService.AgentChannel:input_type -> agent.v1.AgentMessage
+	73,  // 165: agent.v1.AgentService.Heartbeat:input_type -> agent.v1.HeartbeatRequest
+	18,  // 166: agent.v1.AgentService.AgentChannel:output_type -> agent.v1.BackendMessage
+	79,  // 167: agent.v1.AgentService.Heartbeat:output_type -> agent.v1.HeartbeatResponse
+	166, // [166:168] is the sub-list for method output_type
+	164, // [164:166] is the sub-list for method input_type
+	164, // [164:164] is the sub-list for extension type_name
+	164, // [164:164] is the sub-list for extension extendee
+	0,   // [0:164] is the sub-list for field type_name
 }
 
 func init() { file_agent_proto_init() }
@@ -7297,6 +9329,8 @@ func file_agent_proto_init() {
 		(*AgentMessage_TaskResult)(nil),
 		(*AgentMessage_EventBatch)(nil),
 		(*AgentMessage_Status)(nil),
+		(*AgentMessage_ReconcileResult)(nil),
+		(*AgentMessage_ActualInfrastructure)(nil),
 	}
 	file_agent_proto_msgTypes[1].OneofWrappers = []any{
 		(*BackendMessage_Task)(nil),
@@ -7305,6 +9339,7 @@ func file_agent_proto_init() {
 		(*BackendMessage_HealthCheckRequest)(nil),
 		(*BackendMessage_UpdateNotification)(nil),
 		(*BackendMessage_Welcome)(nil),
+		(*BackendMessage_ReconcileTask)(nil),
 	}
 	file_agent_proto_msgTypes[3].OneofWrappers = []any{
 		(*Task_Kubernetes)(nil),
@@ -7344,8 +9379,8 @@ func file_agent_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_proto_rawDesc), len(file_agent_proto_rawDesc)),
-			NumEnums:      16,
-			NumMessages:   80,
+			NumEnums:      17,
+			NumMessages:   105,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

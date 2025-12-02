@@ -182,6 +182,8 @@ func (c *GRPCClient) handleMessage(ctx context.Context, msg *agentv1.BackendMess
 		return handler.HandleHealthCheck(payload.HealthCheckRequest)
 	case *agentv1.BackendMessage_UpdateNotification:
 		return handler.HandleUpdateNotification(payload.UpdateNotification)
+	case *agentv1.BackendMessage_ReconcileTask:
+		return handler.HandleReconcileTask(payload.ReconcileTask)
 	default:
 		log.Printf("[gRPC] Received unknown message type")
 		return nil
@@ -264,6 +266,50 @@ func (c *GRPCClient) SendHeartbeat(ctx context.Context, sysInfo *SystemInfo) err
 	return nil
 }
 
+// SendReconcileResult sends the reconciliation result back to the backend
+func (c *GRPCClient) SendReconcileResult(result *agentv1.ReconcileResult) error {
+	if c.stream == nil {
+		return fmt.Errorf("stream not initialized")
+	}
+
+	msg := &agentv1.AgentMessage{
+		AgentVersion: c.agentVersion,
+		SentAt:       timestamppb.Now(),
+		Payload: &agentv1.AgentMessage_ReconcileResult{
+			ReconcileResult: result,
+		},
+	}
+
+	if err := c.stream.Send(msg); err != nil {
+		return fmt.Errorf("failed to send reconcile result: %w", err)
+	}
+
+	log.Printf("[gRPC] Reconcile result sent for task %s (success: %v)", result.TaskId, result.Success)
+	return nil
+}
+
+// SendActualInfrastructure sends the collected actual infrastructure state to backend
+func (c *GRPCClient) SendActualInfrastructure(actual *agentv1.ActualInfrastructure) error {
+	if c.stream == nil {
+		return fmt.Errorf("stream not initialized")
+	}
+
+	msg := &agentv1.AgentMessage{
+		AgentVersion: c.agentVersion,
+		SentAt:       timestamppb.Now(),
+		Payload: &agentv1.AgentMessage_ActualInfrastructure{
+			ActualInfrastructure: actual,
+		},
+	}
+
+	if err := c.stream.Send(msg); err != nil {
+		return fmt.Errorf("failed to send actual infrastructure: %w", err)
+	}
+
+	log.Printf("[gRPC] Actual infrastructure sent (services: %d)", len(actual.Services))
+	return nil
+}
+
 // Close closes the gRPC connection
 func (c *GRPCClient) Close() error {
 	if c.stream != nil {
@@ -289,4 +335,5 @@ type MessageHandler interface {
 	HandleTaskCancellation(*agentv1.TaskCancellation) error
 	HandleHealthCheck(*agentv1.HealthCheckRequest) error
 	HandleUpdateNotification(*agentv1.UpdateNotification) error
+	HandleReconcileTask(*agentv1.ReconcileTask) error
 }

@@ -4,19 +4,29 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
+	"github.com/calyra-tenatrix/agent/internal/cloud"
 	"github.com/calyra-tenatrix/agent/internal/config"
 	agentv1 "github.com/calyra-tenatrix/agent/internal/proto/agent/v1"
+	"github.com/calyra-tenatrix/agent/internal/reconciler"
 	"github.com/calyra-tenatrix/agent/internal/system"
 )
 
 // Agent represents the main agent structure
 type Agent struct {
-	config  *config.Config
-	version string
-	client  *GRPCClient
-	sysInfo *SystemInfo
+	config      *config.Config
+	version     string
+	client      *GRPCClient
+	sysInfo     *SystemInfo
+	provisioner *cloud.ClusterProvisioner // Manages K8s cluster lifecycle
+	reconciler  *reconciler.Reconciler    // Set by provisioner when cluster is ready
+	ctx         context.Context           // Store context for async operations
+
+	// Provisioning state
+	provisionMu    sync.Mutex
+	isProvisioning bool
 }
 
 // SystemInfo is an alias for system.SystemInfo
@@ -34,6 +44,7 @@ func Run(ctx context.Context, cfg *config.Config, version string) error {
 
 func (a *Agent) run(ctx context.Context) error {
 	log.Printf("🚀 Tenatrix Agent v%s starting...", a.version)
+	a.ctx = ctx
 
 	// Create gRPC client
 	client, err := NewGRPCClient(a.config.BackendURL, a.config.TargetToken, a.version)
@@ -46,6 +57,14 @@ func (a *Agent) run(ctx context.Context) error {
 	// Connect to backend
 	if err := a.client.Connect(ctx); err != nil {
 		return fmt.Errorf("failed to connect to backend: %w", err)
+	}
+
+	// Initialize cluster provisioner (lazy - cluster created on first deployment)
+	if err := a.initProvisioner(); err != nil {
+		log.Printf("⚠️  Cluster provisioner not available: %v", err)
+		// Continue without provisioner - will fail on reconcile tasks
+	} else {
+		log.Printf("✅ Cluster provisioner initialized (cluster will be created on first deployment)")
 	}
 
 	// Collect initial system info
@@ -80,6 +99,77 @@ func (a *Agent) run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// initProvisioner initializes the cluster provisioner
+// The actual K8s cluster is created lazily on first reconcile task
+func (a *Agent) initProvisioner() error {
+	// Extract target ID from token (format: uuid:signature)
+	targetID := a.config.TargetToken
+	if idx := len(targetID); idx > 36 {
+		targetID = targetID[:36] // Get just the UUID part
+	}
+
+	provisioner, err := cloud.NewClusterProvisioner(a.ctx, cloud.ProvisionerConfig{
+		DOToken:   a.config.DOToken,
+		TargetID:  targetID,
+		Namespace: a.config.KubernetesNamespace,
+		StatusCallback: func(status cloud.ProvisioningStatus) {
+			// Log provisioning status
+			log.Printf("[Provisioner] %s: %s (progress: %d%%)",
+				status.State, status.Message, status.Progress)
+			// TODO: Send status to backend via gRPC
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create provisioner: %w", err)
+	}
+
+	a.provisioner = provisioner
+
+	// Check if cluster already exists and is ready
+	if provisioner.IsClusterReady() {
+		a.reconciler = provisioner.GetReconciler()
+		log.Printf("✅ Existing Kubernetes cluster connected")
+	}
+
+	return nil
+}
+
+// ensureCluster ensures the K8s cluster is ready before reconciliation
+// This is called on-demand when a reconcile task is received
+func (a *Agent) ensureCluster() (*reconciler.Reconciler, error) {
+	a.provisionMu.Lock()
+	defer a.provisionMu.Unlock()
+
+	// If already provisioning, wait
+	if a.isProvisioning {
+		return nil, fmt.Errorf("cluster provisioning already in progress")
+	}
+
+	// If reconciler is already available, return it
+	if a.reconciler != nil {
+		return a.reconciler, nil
+	}
+
+	// Check provisioner
+	if a.provisioner == nil {
+		return nil, fmt.Errorf("cluster provisioner not initialized")
+	}
+
+	a.isProvisioning = true
+	defer func() { a.isProvisioning = false }()
+
+	log.Printf("🚀 First deployment - provisioning Kubernetes cluster...")
+
+	// This may take 5-10 minutes for new cluster
+	rec, err := a.provisioner.EnsureCluster(a.ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to provision cluster: %w", err)
+	}
+
+	a.reconciler = rec
+	return rec, nil
 }
 
 // heartbeatLoop sends periodic heartbeats
@@ -160,6 +250,59 @@ func (a *Agent) HandleUpdateNotification(notification *agentv1.UpdateNotificatio
 	} else {
 		log.Printf("ℹ️  Optional update available (will check during next update cycle)")
 	}
+
+	return nil
+}
+
+func (a *Agent) HandleReconcileTask(task *agentv1.ReconcileTask) error {
+	log.Printf("🔄 Received reconcile task: %s (app: %s, env: %s, dry_run: %v)",
+		task.TaskId,
+		task.Desired.ApplicationId,
+		task.Desired.Environment,
+		task.DryRun)
+
+	// Execute reconciliation asynchronously to not block message processing
+	go func() {
+		// Ensure cluster is ready (creates on first deployment)
+		rec, err := a.ensureCluster()
+		if err != nil {
+			log.Printf("❌ Failed to ensure cluster: %v", err)
+			result := &agentv1.ReconcileResult{
+				TaskId:  task.TaskId,
+				Success: false,
+				Error: &agentv1.ErrorInfo{
+					Code:    "CLUSTER_PROVISIONING_FAILED",
+					Message: fmt.Sprintf("Failed to provision Kubernetes cluster: %v", err),
+				},
+			}
+			if sendErr := a.client.SendReconcileResult(result); sendErr != nil {
+				log.Printf("❌ Failed to send reconcile result: %v", sendErr)
+			}
+			return
+		}
+
+		log.Printf("⚙️  Starting reconciliation for task %s...", task.TaskId)
+
+		// Execute reconciliation
+		result := rec.ReconcileTask(a.ctx, task)
+
+		// Log result
+		if result.Success {
+			log.Printf("✅ Reconciliation task %s completed successfully", task.TaskId)
+			if result.DryRun {
+				log.Printf("   📋 Planned changes: %d", len(result.PlannedChanges))
+			} else {
+				log.Printf("   📋 Applied changes: %d", len(result.AppliedChanges))
+			}
+		} else {
+			log.Printf("❌ Reconciliation task %s failed: %s", task.TaskId, result.Error.Message)
+		}
+
+		// Send result back to backend
+		if err := a.client.SendReconcileResult(result); err != nil {
+			log.Printf("❌ Failed to send reconcile result: %v", err)
+		}
+	}()
 
 	return nil
 }

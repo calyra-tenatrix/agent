@@ -24,6 +24,14 @@ type Config struct {
 
 	// HeartbeatInterval is how often to send heartbeat
 	HeartbeatInterval time.Duration `json:"heartbeat_interval"`
+
+	// Kubernetes configuration
+	// KubernetesNamespace is the namespace for deploying services (default: "default")
+	KubernetesNamespace string `json:"kubernetes_namespace"`
+
+	// KubernetesInCluster indicates if agent runs inside Kubernetes cluster
+	// If true, uses in-cluster config; if false, uses ~/.kube/config
+	KubernetesInCluster bool `json:"kubernetes_in_cluster"`
 }
 
 // rawConfig is used for JSON unmarshaling with string durations
@@ -33,6 +41,8 @@ type rawConfig struct {
 	BackendURL          string `json:"backend_url"`
 	UpdateCheckInterval string `json:"update_check_interval"`
 	HeartbeatInterval   string `json:"heartbeat_interval"`
+	KubernetesNamespace string `json:"kubernetes_namespace"`
+	KubernetesInCluster bool   `json:"kubernetes_in_cluster"`
 }
 
 // Load reads and parses the configuration file
@@ -75,11 +85,19 @@ func Load(path string) (*Config, error) {
 		}
 	}
 
+	// Kubernetes namespace defaults to "default"
+	kubeNamespace := raw.KubernetesNamespace
+	if kubeNamespace == "" {
+		kubeNamespace = "default"
+	}
+
 	return &Config{
 		TargetToken:         raw.TargetToken,
 		DOToken:             raw.DOToken,
 		BackendURL:          raw.BackendURL,
 		UpdateCheckInterval: updateInterval,
 		HeartbeatInterval:   heartbeatInterval,
+		KubernetesNamespace: kubeNamespace,
+		KubernetesInCluster: raw.KubernetesInCluster,
 	}, nil
 }
