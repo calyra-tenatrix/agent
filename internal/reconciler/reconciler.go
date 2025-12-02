@@ -314,9 +314,11 @@ func (r *Reconciler) applyServiceChange(
 
 		err = r.stateCollector.WaitForDeploymentReady(waitCtx, deployment.Name, 2*time.Minute)
 		if err != nil {
-			// Log warning but don't fail - deployment will eventually become ready
-			// This allows the reconciliation to continue
-			return nil // Consider returning error if strict readiness is required
+			// Soft fail: Log warning ama başarısız olarak işaretleme
+			// Deployment eventually ready olacak - kullanıcı status'ı daha sonra kontrol edebilir
+			fmt.Printf("[Reconciler] ⚠️  Warning: deployment '%s' not ready within timeout (soft fail): %v\n",
+				deployment.Name, err)
+			// Reconciliation başarılı olarak devam ediyor
 		}
 
 		return nil
