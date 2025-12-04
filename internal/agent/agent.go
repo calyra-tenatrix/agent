@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/calyra-tenatrix/agent/internal/bootstrap"
 	"github.com/calyra-tenatrix/agent/internal/cloud"
 	"github.com/calyra-tenatrix/agent/internal/config"
 	agentv1 "github.com/calyra-tenatrix/agent/internal/proto/agent/v1"
@@ -45,6 +46,13 @@ func Run(ctx context.Context, cfg *config.Config, version string) error {
 func (a *Agent) run(ctx context.Context) error {
 	log.Printf("🚀 Tenatrix Agent v%s starting...", a.version)
 	a.ctx = ctx
+
+	// Ensure build dependencies are installed (Docker, Git, Nixpacks)
+	if err := a.ensureBuildDependencies(ctx); err != nil {
+		// Log warning but don't fail - agent can still work for non-build tasks
+		log.Printf("⚠️  Build dependencies check failed: %v", err)
+		log.Printf("   Build tasks will fail until dependencies are resolved")
+	}
 
 	// Create gRPC client
 	client, err := NewGRPCClient(a.config.BackendURL, a.config.TargetToken, a.version)
@@ -305,4 +313,19 @@ func (a *Agent) HandleReconcileTask(task *agentv1.ReconcileTask) error {
 	}()
 
 	return nil
+}
+
+// ensureBuildDependencies checks and installs required build tools
+// This runs at agent startup to ensure Docker, Git, and Nixpacks are available
+func (a *Agent) ensureBuildDependencies(ctx context.Context) error {
+	dm := bootstrap.NewDependencyManager()
+	return dm.EnsureDependencies(ctx)
+}
+
+// AreBuildDependenciesReady checks if all build dependencies are satisfied
+// This can be called before accepting build tasks
+func (a *Agent) AreBuildDependenciesReady(ctx context.Context) bool {
+	dm := bootstrap.NewDependencyManager()
+	result := dm.Check(ctx)
+	return result.AllSatisfied
 }
